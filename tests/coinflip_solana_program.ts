@@ -70,7 +70,7 @@ describe("solana-coinflip-game", () => {
       .accounts({
         player: player.publicKey,
         coinflip,
-        houseTreasury: houseTreasury.publicKey,
+        // houseTreasury: houseTreasury.publicKey,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
@@ -91,7 +91,7 @@ describe("solana-coinflip-game", () => {
       .accounts({
         player: player.publicKey,
         coinflip: coinflip,
-        houseTreasury: houseTreasury.publicKey,
+        // houseTreasury: houseTreasury.publicKey,
         vrf: vrf.programId,
         config: networkState,
         random,
