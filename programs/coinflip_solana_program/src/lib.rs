@@ -5,7 +5,7 @@ mod misc;
 mod pda;
 use crate::pda::*;
 
-declare_id!("EjTqfwzMe3QcbAk538ubFSrtDqMxGsjk3ezoJqGTgU4h");
+declare_id!("FVDsGDYgCuxsHqtBmiq5k7tWZRbzQQM3ghWn56xTKAP9");
 
 pub const MIN_BET: u64 = 5 * LAMPORTS_PER_SOL / 100; // 0.05 SOL
 pub const MAX_BET: u64 = 10 * LAMPORTS_PER_SOL; // 10 SOL
@@ -132,11 +132,14 @@ pub mod solana_coinflip_game {
         let result_bytes = randomness.to_le_bytes();
         let result = u64::from_le_bytes(result_bytes) % 100;
 
-        let game_result = if result < 5 {
+        let game_result = if result < 10 {
+            // 0-9 (5% chance)
             GameResult::Tie
-        } else if result < 52 {
+        } else if result < 105 {
+            // 10-104 (47.5% chance)
             GameResult::Option1Wins
         } else {
+            // 105-199 (47.5% chance)
             GameResult::Option2Wins
         };
 

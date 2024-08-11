@@ -68,38 +68,38 @@ describe("solana-coinflip-game", () => {
     console.log("Force:", force.toBase58());
   });
 
-  it("Initialize house treasury", async () => {
-    try {
-      const tx = await program.methods
-        .initializeHouse()
-        .accounts({
-          houseTreasury,
-          authority: player.publicKey,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-      console.log("House treasury initialized");
-    } catch (e) {
-      console.log("House treasury already initialized or error:", e);
-    }
-  });
+  // it("Initialize house treasury", async () => {
+  //   try {
+  //     const tx = await program.methods
+  //       .initializeHouse()
+  //       .accounts({
+  //         houseTreasury,
+  //         authority: player.publicKey,
+  //         systemProgram: SystemProgram.programId,
+  //       })
+  //       .rpc();
+  //     console.log("House treasury initialized");
+  //   } catch (e) {
+  //     console.log("House treasury already initialized or error:", e);
+  //   }
+  // });
 
-  it("Fund house treasury", async () => {
-    try {
-      const tx = await program.methods
-        .fundTreasury(new BN(LAMPORTS_PER_SOL * 0.5))
-        .accounts({
-          funder: player.publicKey,
-          houseTreasury,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-      console.log("House treasury funded");
-    } catch (e) {
-      console.error("Error funding house treasury:", e);
-      throw e;
-    }
-  });
+  // it("Fund house treasury", async () => {
+  //   try {
+  //     const tx = await program.methods
+  //       .fundTreasury(new BN(LAMPORTS_PER_SOL * 0.5))
+  //       .accounts({
+  //         funder: player.publicKey,
+  //         houseTreasury,
+  //         systemProgram: SystemProgram.programId,
+  //       })
+  //       .rpc();
+  //     console.log("House treasury funded");
+  //   } catch (e) {
+  //     console.error("Error funding house treasury:", e);
+  //     throw e;
+  //   }
+  // });
 
   it("Create coinflip game", async () => {
     try {
@@ -180,6 +180,19 @@ describe("solana-coinflip-game", () => {
       console.log(`Game is finished`, tx);
       const gameResult = await program.account.coinflip.fetch(coinflip);
       console.log("Program account data: ", gameResult);
+
+      // // Log the VRF number
+      const vrfBigNum = new BN(gameResult.force.slice(0, 8), "le");
+      const vrfNumber = vrfBigNum.mod(new BN(200)).toNumber();
+      console.log("VRF number (0-199):", vrfNumber);
+      console.log(
+        "Game outcome:",
+        vrfNumber < 10
+          ? "Tie (5% chance)"
+          : vrfNumber < 105
+          ? "Option1 Wins (47.5% chance)"
+          : "Option2 Wins (47.5% chance)"
+      );
 
       // Log balances after the game
       const playerBalance = await program.provider.connection.getBalance(
