@@ -38,28 +38,27 @@
 //   const vrf = new Orao(program.provider as any);
 //   const networkState = networkStateAccountAddress();
 //   let force: Uint8Array;
+//   let oraoTreasury: PublicKey;
 
 //   // before(async () => {
-//   //   const balance = await provider.connection.getBalance(player.publicKey);
-//   //   if (balance < LAMPORTS_PER_SOL * 5) {
-//   //     const signature = await provider.connection.requestAirdrop(
-//   //       player.publicKey,
-//   //       LAMPORTS_PER_SOL * 5
-//   //     );
-//   //     await provider.connection.confirmTransaction(signature);
-//   //   }
+//   //   oraoTreasury = await vrf.provider.publicKey;
+//   //   console.log("Orao Treasury address:", oraoTreasury.toBase58());
 //   // });
 
 //   it("Initialize house treasury", async () => {
-//     const tx = await program.methods
-//       .initializeHouse()
-//       .accounts({
-//         houseTreasury,
-//         authority: player.publicKey,
-//         systemProgram: SystemProgram.programId,
-//       })
-//       .rpc();
-//     console.log("House treasury initialized");
+//     try {
+//       const tx = await program.methods
+//         .initializeHouse()
+//         .accounts({
+//           houseTreasury,
+//           authority: player.publicKey,
+//           systemProgram: SystemProgram.programId,
+//         })
+//         .rpc();
+//       console.log("House treasury initialized");
+//     } catch (e) {
+//       console.log("House treasury already initialized or error:", e);
+//     }
 //   });
 
 //   it("Fund house treasury", async () => {
@@ -75,7 +74,7 @@
 //       console.log("House treasury funded");
 //     } catch (e) {
 //       console.error("Error funding house treasury:", e);
-//       throw e; // rethrow the error to fail the test
+//       throw e;
 //     }
 //   });
 
@@ -99,7 +98,7 @@
 
 //   it("Play the game", async () => {
 //     try {
-//       const force = new Uint8Array(32);
+//       force = new Uint8Array(32);
 //       crypto.getRandomValues(force);
 //       const random = randomnessAccountAddress(Buffer.from(force));
 
@@ -109,6 +108,7 @@
 //           player: player.publicKey,
 //           coinflip: coinflip,
 //           houseTreasury: houseTreasury,
+//           oraoTreasury: oraoTreasury,
 //           vrf: vrf.programId,
 //           config: networkState,
 //           random,
@@ -131,6 +131,7 @@
 //           player: player.publicKey,
 //           coinflip: coinflip,
 //           houseTreasury: houseTreasury,
+//           oraoTreasury: oraoTreasury,
 //           vrf: vrf.programId,
 //           config: networkState,
 //           random: randomnessAccountAddress(Buffer.from(force)),
@@ -146,18 +147,6 @@
 //       throw e;
 //     }
 //   });
-
-//   // it("Withdraw house funds", async () => {
-//   //   const tx = await program.methods
-//   //     .withdrawHouseFunds(new BN(LAMPORTS_PER_SOL * 0.1))
-//   //     .accounts({
-//   //       authority: player.publicKey,
-//   //       houseTreasury,
-//   //       systemProgram: SystemProgram.programId,
-//   //     })
-//   //     .rpc();
-//   //   console.log("Funds withdrawn from house treasury");
-//   // });
 // });
 
 import * as anchor from "@project-serum/anchor";
@@ -168,6 +157,8 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
+  sendAndConfirmTransaction,
+  Transaction,
 } from "@solana/web3.js";
 import { BN } from "bn.js";
 import {
@@ -175,6 +166,19 @@ import {
   Orao,
   randomnessAccountAddress,
 } from "@orao-network/solana-vrf";
+
+function randomString(length = 8) {
+  let result = "";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
+}
 
 describe("solana-coinflip-game", () => {
   const provider = anchor.AnchorProvider.env();
@@ -184,7 +188,7 @@ describe("solana-coinflip-game", () => {
     .SolanaCoinflipGame as Program<SolanaCoinflipGame>;
   const player = provider.wallet;
 
-  const room_id = "test_room_" + Math.random().toString(36).substring(7);
+  const room_id = randomString();
   const amount = new BN(LAMPORTS_PER_SOL * 0.1);
   const [coinflip] = PublicKey.findProgramAddressSync(
     [Buffer.from("coinflip"), Buffer.from(room_id)],
@@ -197,15 +201,17 @@ describe("solana-coinflip-game", () => {
 
   console.log("House Treasury PDA address:", houseTreasury.toBase58());
 
-  const vrf = new Orao(program.provider as any);
+  const vrf = new Orao(provider as any);
   const networkState = networkStateAccountAddress();
-  let force: Uint8Array;
-  let oraoTreasury: PublicKey;
+  let force: PublicKey;
+  const oraoTreasury = new PublicKey(
+    "9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"
+  );
 
-  // before(async () => {
-  //   oraoTreasury = await vrf.provider.publicKey;
-  //   console.log("Orao Treasury address:", oraoTreasury.toBase58());
-  // });
+  before(async () => {
+    force = Keypair.generate().publicKey;
+    console.log("Force:", force.toBase58());
+  });
 
   it("Initialize house treasury", async () => {
     try {
@@ -252,6 +258,10 @@ describe("solana-coinflip-game", () => {
         })
         .rpc();
       console.log("Coinflip game created, tx:", tx);
+      console.log(
+        "Program account data: ",
+        await program.account.coinflip.fetch(coinflip)
+      );
     } catch (e) {
       console.error("Error creating coinflip game:", e);
       throw e;
@@ -260,12 +270,10 @@ describe("solana-coinflip-game", () => {
 
   it("Play the game", async () => {
     try {
-      force = new Uint8Array(32);
-      crypto.getRandomValues(force);
-      const random = randomnessAccountAddress(Buffer.from(force));
+      const random = randomnessAccountAddress(force.toBuffer());
 
       const tx = await program.methods
-        .playCoinflip(room_id, Array.from(force))
+        .playCoinflip(room_id, [...force.toBuffer()])
         .accounts({
           player: player.publicKey,
           coinflip: coinflip,
@@ -279,16 +287,27 @@ describe("solana-coinflip-game", () => {
         .rpc();
 
       console.log(`Game has started, randomness is requested: `, tx);
+      console.log(
+        "Program account data: ",
+        await program.account.coinflip.fetch(coinflip)
+      );
     } catch (e) {
       console.error("Error playing the game:", e);
       throw e;
     }
   });
 
+  it("Randomness fulfilled", async () => {
+    let randomnessFulfilled = await vrf.waitFulfilled(force.toBuffer());
+    console.log("Randomness is fulfilled, we can call the result function");
+  });
+
   it("Get the result", async () => {
     try {
+      const random = randomnessAccountAddress(force.toBuffer());
+
       const tx = await program.methods
-        .resultCoinflip(room_id, Array.from(force))
+        .resultCoinflip(room_id, [...force.toBuffer()])
         .accounts({
           player: player.publicKey,
           coinflip: coinflip,
@@ -296,14 +315,16 @@ describe("solana-coinflip-game", () => {
           oraoTreasury: oraoTreasury,
           vrf: vrf.programId,
           config: networkState,
-          random: randomnessAccountAddress(Buffer.from(force)),
+          random,
           systemProgram: SystemProgram.programId,
         })
         .rpc();
 
       console.log(`Game is finished`, tx);
-      const gameResult = await program.account.coinflip.fetch(coinflip);
-      console.log("Program account data: ", gameResult);
+      console.log(
+        "Program account data: ",
+        await program.account.coinflip.fetch(coinflip)
+      );
     } catch (e) {
       console.error("Error getting the result:", e);
       throw e;
