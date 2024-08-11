@@ -5,7 +5,7 @@ mod misc;
 mod pda;
 use crate::pda::*;
 
-declare_id!("WmoVEM2PEGyBSDN96UyXgchHdqysPA3KPdEGVaP3D4Z");
+declare_id!("EjTqfwzMe3QcbAk538ubFSrtDqMxGsjk3ezoJqGTgU4h");
 
 pub const MIN_BET: u64 = 5 * LAMPORTS_PER_SOL / 100; // 0.05 SOL
 pub const MAX_BET: u64 = 10 * LAMPORTS_PER_SOL; // 10 SOL
@@ -27,24 +27,20 @@ pub mod solana_coinflip_game {
     }
 
     pub fn fund_treasury(ctx: Context<FundTreasury>, amount: u64) -> Result<()> {
-        // Create the transfer instruction
         let ix = system_instruction::transfer(
             &ctx.accounts.funder.key(),
             &ctx.accounts.house_treasury.key(),
             amount,
         );
 
-        // Create the account infos
         let account_infos = [
             ctx.accounts.funder.to_account_info().clone(),
             ctx.accounts.house_treasury.to_account_info().clone(),
             ctx.accounts.system_program.to_account_info().clone(),
         ];
 
-        // Send the instruction
         solana_program::program::invoke(&ix, &account_infos)?;
 
-        // Update the balance in the HouseTreasury account
         ctx.accounts.house_treasury.balance += amount;
 
         Ok(())
@@ -54,6 +50,7 @@ pub mod solana_coinflip_game {
         ctx: Context<CreateCoinflip>,
         room_id: String,
         amount: u64,
+        player_choice: PlayerChoice,
     ) -> Result<()> {
         if amount < MIN_BET {
             return err!(InvalidAmount::TooLow);
@@ -67,7 +64,6 @@ pub mod solana_coinflip_game {
             return err!(HouseError::InsufficientFunds);
         }
 
-        // Transfer bet amount from player to house treasury
         let ix = solana_program::system_instruction::transfer(
             &ctx.accounts.player.key(),
             &ctx.accounts.house_treasury.key(),
@@ -82,13 +78,12 @@ pub mod solana_coinflip_game {
             ],
         )?;
 
-        // Update house balance
         ctx.accounts.house_treasury.balance += amount;
 
-        // Initialize coinflip game
         let coinflip = &mut ctx.accounts.coinflip;
         coinflip.player = ctx.accounts.player.key();
         coinflip.amount = amount;
+        coinflip.player_choice = player_choice;
         coinflip.status = Status::Waiting;
 
         Ok(())
@@ -114,8 +109,7 @@ pub mod solana_coinflip_game {
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         orao_solana_vrf::cpi::request(cpi_ctx, force)?;
 
-        room.force = [0u8; 200];
-        room.force[..32].copy_from_slice(&force);
+        room.force = force;
         room.status = Status::Processing;
         msg!("Started game in room {}", room_id);
         Ok(())
@@ -124,7 +118,7 @@ pub mod solana_coinflip_game {
     pub fn result_coinflip(
         ctx: Context<ResultCoinflip>,
         room_id: String,
-        force: [u8; 200],
+        force: [u8; 32],
     ) -> Result<()> {
         let coinflip = &mut ctx.accounts.coinflip;
         let house = &mut ctx.accounts.house_treasury;
@@ -135,33 +129,41 @@ pub mod solana_coinflip_game {
             return err!(StillProcessing::StillProcessing);
         }
 
-        let result = randomness % 200;
-        let game_result = if result < 10 {
+        let result_bytes = randomness.to_le_bytes();
+        let result = u64::from_le_bytes(result_bytes) % 100;
+
+        let game_result = if result < 5 {
             GameResult::Tie
-        } else if result < 105 {
-            GameResult::PlayerWin
+        } else if result < 52 {
+            GameResult::Option1Wins
         } else {
-            GameResult::HouseWin
+            GameResult::Option2Wins
         };
 
-        msg!("VRF result is: {}", randomness);
+        msg!("VRF result is: {}", result);
 
-        match game_result {
-            GameResult::PlayerWin => {
-                let payout = coinflip.amount * 2;
-                **ctx.accounts.player.lamports.borrow_mut() += payout;
-                house.balance -= payout;
-                msg!("Player wins: {}", coinflip.player.to_string());
-            }
-            GameResult::HouseWin => {
-                msg!("House wins");
-            }
-            GameResult::Tie => {
-                **ctx.accounts.player.lamports.borrow_mut() += coinflip.amount;
-                house.balance -= coinflip.amount;
+        let payout = match (game_result, &coinflip.player_choice) {
+            (GameResult::Tie, _) => {
+                **house.to_account_info().try_borrow_mut_lamports()? -= coinflip.amount;
+                **ctx.accounts.player.try_borrow_mut_lamports()? += coinflip.amount;
                 msg!("It's a tie");
+                0
             }
-        }
+            (GameResult::Option1Wins, PlayerChoice::Option1)
+            | (GameResult::Option2Wins, PlayerChoice::Option2) => {
+                let win_amount = coinflip.amount * 2;
+                **house.to_account_info().try_borrow_mut_lamports()? -= win_amount;
+                **ctx.accounts.player.try_borrow_mut_lamports()? += win_amount;
+                msg!("Player wins: {}", coinflip.player.to_string());
+                win_amount
+            }
+            _ => {
+                msg!("House wins");
+                coinflip.amount
+            }
+        };
+
+        house.balance -= payout;
 
         msg!(
             "Coinflip game in room {} has concluded with result {:?}",
@@ -170,25 +172,6 @@ pub mod solana_coinflip_game {
         );
         coinflip.result = Some(game_result);
         coinflip.status = Status::Finished;
-
-        Ok(())
-    }
-
-    pub fn withdraw_house_funds(ctx: Context<WithdrawHouseFunds>, amount: u64) -> Result<()> {
-        // First, check the balance without mutable borrow
-        if amount > ctx.accounts.house_treasury.balance {
-            return err!(HouseError::InsufficientFunds);
-        }
-
-        // Perform the transfer
-        let from_info = ctx.accounts.house_treasury.to_account_info();
-        let to_info = ctx.accounts.authority.to_account_info();
-
-        **from_info.try_borrow_mut_lamports()? -= amount;
-        **to_info.try_borrow_mut_lamports()? += amount;
-
-        // Now update the balance
-        ctx.accounts.house_treasury.balance -= amount;
 
         Ok(())
     }

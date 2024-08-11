@@ -18,9 +18,15 @@ impl Default for Status {
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum GameResult {
-    PlayerWin,
-    HouseWin,
+    Option1Wins,
+    Option2Wins,
     Tie
+}
+
+#[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
+pub enum PlayerChoice {
+    Option1,
+    Option2,
 }
 
 #[account]
@@ -33,7 +39,8 @@ pub struct HouseTreasury {
 pub struct Coinflip {
     pub player: Pubkey,
     pub amount: u64,
-    pub force: [u8; 200],
+    pub player_choice: PlayerChoice,
+    pub force: [u8; 32],
     pub result: Option<GameResult>,
     pub status: Status
 }
@@ -67,7 +74,7 @@ pub struct FundTreasury<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(room_id: String, amount: u64)]
+#[instruction(room_id: String, amount: u64, player_choice: PlayerChoice)]
 pub struct CreateCoinflip<'info> {
     #[account(mut)]
     pub player: Signer<'info>,
@@ -134,7 +141,7 @@ pub struct PlayCoinflip<'info> {
 #[instruction(room_id: String, force: [u8; 32])]
 pub struct ResultCoinflip<'info> {
     #[account(mut)]
-    pub player: AccountInfo<'info>,
+    pub player: Signer<'info>,
 
     #[account(
         mut, 
@@ -144,16 +151,18 @@ pub struct ResultCoinflip<'info> {
     )] 
     pub coinflip: Account<'info, Coinflip>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"house_treasury"],
+        bump
+    )]
     pub house_treasury: Account<'info, HouseTreasury>,
 
     /// CHECK: This is the Orao VRF treasury account
-    #[account(mut)]
     pub orao_treasury: AccountInfo<'info>,
 
     /// CHECK: Randomness
     #[account(
-        mut,
         seeds = [RANDOMNESS_ACCOUNT_SEED.as_ref(), &force],
         bump,
         seeds::program = orao_solana_vrf::ID
@@ -161,7 +170,6 @@ pub struct ResultCoinflip<'info> {
     pub random: AccountInfo<'info>,
 
     #[account(
-        mut,
         seeds = [CONFIG_ACCOUNT_SEED.as_ref()],
         bump,
         seeds::program = orao_solana_vrf::ID
