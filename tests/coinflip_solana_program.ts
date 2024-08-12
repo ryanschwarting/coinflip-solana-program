@@ -106,6 +106,38 @@ describe("solana-coinflip-game", () => {
   //   }
   // });
 
+  // it("Unpauses the program", async () => {
+  //   try {
+  //     // Check initial pause state
+  //     let houseTreasuryAccount = await program.account.houseTreasury.fetch(
+  //       houseTreasury
+  //     );
+  //     console.log("Initial pause state:", houseTreasuryAccount.paused);
+
+  //     // Toggle pause state
+  //     const toggleTx = await program.methods
+  //       .togglePause()
+  //       .accounts({
+  //         authority: player.publicKey,
+  //         houseTreasury: houseTreasury,
+  //       })
+  //       .rpc();
+  //     console.log("Toggle transaction:", toggleTx);
+
+  //     // Check final pause state
+  //     houseTreasuryAccount = await program.account.houseTreasury.fetch(
+  //       houseTreasury
+  //     );
+  //     console.log("Final pause state:", houseTreasuryAccount.paused);
+
+  //     // Assert that the program is now unpaused
+  //     assert.isFalse(houseTreasuryAccount.paused, "Program should be unpaused");
+  //   } catch (e) {
+  //     console.error("Test failed:", e);
+  //     throw e;
+  //   }
+  // });
+
   it("Create coinflip game", async () => {
     try {
       initialPlayerBalance = new BN(
@@ -196,7 +228,7 @@ describe("solana-coinflip-game", () => {
       console.log("Program account data: ", gameResult);
 
       // // Log the VRF number
-      const vrfBigNum = new BN(gameResult.force.slice(0, 8), "le");
+      // const vrfBigNum = new BN(gameResult.force.slice(0, 8), "le");
       // const vrfNumber = vrfBigNum.mod(new BN(200)).toNumber();
       // const vrfNumber = vrfBigNum.toNumber();
       // console.log("VRF number (0-199):", vrfNumber);
@@ -232,148 +264,147 @@ describe("solana-coinflip-game", () => {
     }
   });
 
-  // it("Get the result", async () => {
+  // it("Pauses the program and fails to play a game", async () => {
   //   try {
-  //     const random = randomnessAccountAddress(Buffer.from(force.toBuffer()));
-
-  //     const tx = await program.methods
-  //       .resultCoinflip(room_id, Array.from(force.toBuffer()))
+  //     // First, pause the program
+  //     const pauseTx = await program.methods
+  //       .togglePause()
   //       .accounts({
-  //         player: player.publicKey,
-  //         coinflip: coinflip,
+  //         authority: player.publicKey,
   //         houseTreasury: houseTreasury,
-  //         oraoTreasury: oraoTreasury,
-  //         vrf: vrf.programId,
-  //         config: networkState,
-  //         random,
+  //       })
+  //       .rpc();
+  //     console.log("Program paused. Transaction:", pauseTx);
+
+  //     // Verify the program is paused
+  //     const houseTreasuryAccount = await program.account.houseTreasury.fetch(
+  //       houseTreasury
+  //     );
+  //     assert.isTrue(houseTreasuryAccount.paused, "Program should be paused");
+
+  //     // Now try to create a coinflip game (this should fail)
+  //     const playerChoice = { option1: {} };
+  //     try {
+  //       await program.methods
+  //         .createCoinflip(room_id, amount, playerChoice)
+  //         .accounts({
+  //           player: player.publicKey,
+  //           coinflip: coinflip,
+  //           houseTreasury: houseTreasury,
+  //           systemProgram: SystemProgram.programId,
+  //           clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+  //         })
+  //         .rpc();
+
+  //       // If we reach here, the test should fail because the transaction should have thrown an error
+  //       assert.fail(
+  //         "Creating a coinflip game should have failed while the program is paused"
+  //       );
+  //     } catch (error) {
+  //       // Check if the error is the one we expect (program paused)
+  //       assert.include(
+  //         error.message,
+  //         "Program is currently paused",
+  //         "Error should indicate that the program is paused"
+  //       );
+  //     }
+
+  //     // Unpause the program for cleanup
+  //     await program.methods
+  //       .togglePause()
+  //       .accounts({
+  //         authority: player.publicKey,
+  //         houseTreasury: houseTreasury,
+  //       })
+  //       .rpc();
+
+  //     console.log("Program unpaused for cleanup");
+  //   } catch (e) {
+  //     console.error("Test failed:", e);
+  //     throw e;
+  //   }
+  // });
+
+  // it("Withdraw funds from treasury", async () => {
+  //   try {
+  //     // Get the current balance of the treasury
+  //     const initialTreasuryBalance =
+  //       await program.provider.connection.getBalance(houseTreasury);
+  //     console.log(
+  //       "Initial Treasury Balance:",
+  //       initialTreasuryBalance / LAMPORTS_PER_SOL,
+  //       "SOL"
+  //     );
+
+  //     // Get the current balance of the authority (player in this case)
+  //     const initialAuthorityBalance =
+  //       await program.provider.connection.getBalance(player.publicKey);
+  //     console.log(
+  //       "Initial Authority Balance:",
+  //       initialAuthorityBalance / LAMPORTS_PER_SOL,
+  //       "SOL"
+  //     );
+
+  //     // Define the amount to withdraw (e.g., half of the treasury balance)
+  //     const withdrawAmount = Math.floor(initialTreasuryBalance / 2);
+
+  //     // Perform the withdrawal
+  //     const tx = await program.methods
+  //       .withdrawHouseFunds(new BN(withdrawAmount))
+  //       .accounts({
+  //         authority: player.publicKey,
+  //         houseTreasury: houseTreasury,
   //         systemProgram: SystemProgram.programId,
   //       })
   //       .rpc();
 
-  //     console.log(`Game is finished`, tx);
-  //     const gameResult = await program.account.coinflip.fetch(coinflip);
-  //     console.log("Program account data: ", gameResult);
+  //     console.log("Withdrawal transaction:", tx);
 
-  //     // Log the VRF number
-  //     const vrfBigNum = new BN(gameResult.force.slice(0, 8), "le");
-  //     const vrfNumber = vrfBigNum.mod(new BN(200)).toNumber();
-  //     console.log("VRF number (0-199):", vrfNumber);
-
-  //     // Determine the game outcome based on VRF number
-  //     let calculatedOutcome;
-  //     if (vrfNumber < 10) {
-  //       calculatedOutcome = "Tie";
-  //     } else if (vrfNumber < 105) {
-  //       calculatedOutcome = "Option1Wins";
-  //     } else {
-  //       calculatedOutcome = "Option2Wins";
-  //     }
-
-  //     console.log("Calculated game outcome:", calculatedOutcome);
-  //     console.log("Stored game result:", gameResult.result);
-  //     console.log("Player's choice:", gameResult.playerChoice);
-
-  //     // Determine if the player won, lost, or tied
-  //     let playerResult;
-  //     if (calculatedOutcome === "Tie") {
-  //       playerResult = "Tie";
-  //     } else if (
-  //       (calculatedOutcome === "Option1Wins" &&
-  //         gameResult.playerChoice.option1) ||
-  //       (calculatedOutcome === "Option2Wins" && gameResult.playerChoice.option2)
-  //     ) {
-  //       playerResult = "Win";
-  //     } else {
-  //       playerResult = "Loss";
-  //     }
-
-  //     console.log("Player result:", playerResult);
-  //     // Log only the house treasury balance after the game
-  //     const houseTreasuryBalance = await program.provider.connection.getBalance(
+  //     // Get the new balance of the treasury
+  //     const newTreasuryBalance = await program.provider.connection.getBalance(
   //       houseTreasury
   //     );
   //     console.log(
-  //       "House Treasury balance after game:",
-  //       houseTreasuryBalance / LAMPORTS_PER_SOL,
+  //       "New Treasury Balance:",
+  //       newTreasuryBalance / LAMPORTS_PER_SOL,
   //       "SOL"
   //     );
 
-  //     // const playerBalance = new BN(
-  //     //   await program.provider.connection.getBalance(player.publicKey)
-  //     // );
-  //     // const houseTreasuryBalance = new BN(
-  //     //   await program.provider.connection.getBalance(houseTreasury)
-  //     // );
-  //     // console.log(
-  //     //   "Player balance after game:",
-  //     //   playerBalance.div(new BN(LAMPORTS_PER_SOL)).toNumber().toFixed(4),
-  //     //   "SOL"
-  //     // );
-  //     // console.log(
-  //     //   "House Treasury balance after game:",
-  //     //   houseTreasuryBalance
-  //     //     .div(new BN(LAMPORTS_PER_SOL))
-  //     //     .toNumber()
-  //     //     .toFixed(4),
-  //     //   "SOL"
-  //     // );
-
-  //     // Verify that the stored result matches the calculated outcome
-  //     const storedResultKey = Object.keys(gameResult.result)[0];
-  //     assert.equal(
-  //       storedResultKey.toLowerCase(),
-  //       calculatedOutcome.toLowerCase(),
-  //       "Stored result does not match calculated outcome"
+  //     // Get the new balance of the authority
+  //     const newAuthorityBalance = await program.provider.connection.getBalance(
+  //       player.publicKey
+  //     );
+  //     console.log(
+  //       "New Authority Balance:",
+  //       newAuthorityBalance / LAMPORTS_PER_SOL,
+  //       "SOL"
   //     );
 
-  //     // Helper function to convert BN to number with 4 decimal places
-  //     // const bnToNumber = (bn: BN) =>
-  //     //   bn.div(new BN(LAMPORTS_PER_SOL)).toNumber().toFixed(4);
+  //     // Assert that the treasury balance has decreased by the withdrawn amount
+  //     assert.approximately(
+  //       initialTreasuryBalance - newTreasuryBalance,
+  //       withdrawAmount,
+  //       LAMPORTS_PER_SOL / 100, // Allow for a small difference due to transaction fees
+  //       "Treasury balance should have decreased by the withdrawn amount"
+  //     );
 
-  //     // // Verify that the player result is correct based on their choice and the outcome
-  //     // if (playerResult === "Win") {
-  //     //   assert(
-  //     //     playerBalance.eq(initialPlayerBalance.add(amount)),
-  //     //     `Player balance incorrect for win. Expected: ${bnToNumber(
-  //     //       initialPlayerBalance.add(amount)
-  //     //     )}, Actual: ${bnToNumber(playerBalance)}`
-  //     //   );
-  //     //   assert(
-  //     //     houseTreasuryBalance.eq(initialHouseTreasuryBalance.sub(amount)),
-  //     //     `House balance incorrect for player win. Expected: ${bnToNumber(
-  //     //       initialHouseTreasuryBalance.sub(amount)
-  //     //     )}, Actual: ${bnToNumber(houseTreasuryBalance)}`
-  //     //   );
-  //     // } else if (playerResult === "Loss") {
-  //     //   assert(
-  //     //     playerBalance.eq(initialPlayerBalance.sub(amount)),
-  //     //     `Player balance incorrect for loss. Expected: ${bnToNumber(
-  //     //       initialPlayerBalance.sub(amount)
-  //     //     )}, Actual: ${bnToNumber(playerBalance)}`
-  //     //   );
-  //     //   assert(
-  //     //     houseTreasuryBalance.eq(initialHouseTreasuryBalance.add(amount)),
-  //     //     `House balance incorrect for player loss. Expected: ${bnToNumber(
-  //     //       initialHouseTreasuryBalance.add(amount)
-  //     //     )}, Actual: ${bnToNumber(houseTreasuryBalance)}`
-  //     //   );
-  //     // } else {
-  //     //   // Tie
-  //     //   assert(
-  //     //     playerBalance.eq(initialPlayerBalance),
-  //     //     `Player balance should not change for tie. Expected: ${bnToNumber(
-  //     //       initialPlayerBalance
-  //     //     )}, Actual: ${bnToNumber(playerBalance)}`
-  //     //   );
-  //     //   assert(
-  //     //     houseTreasuryBalance.eq(initialHouseTreasuryBalance),
-  //     //     `House balance should not change for tie. Expected: ${bnToNumber(
-  //     //       initialHouseTreasuryBalance
-  //     //     )}, Actual: ${bnToNumber(houseTreasuryBalance)}`
-  //     //   );
-  //     // }
+  //     // Assert that the authority received the funds (minus transaction fees)
+  //     const withdrawnAmount = newAuthorityBalance - initialAuthorityBalance;
+  //     assert(withdrawnAmount > 0, "Authority should have received funds");
+  //     assert.approximately(
+  //       withdrawnAmount,
+  //       withdrawAmount,
+  //       LAMPORTS_PER_SOL / 100, // Allow for a small difference due to transaction fees
+  //       "Withdrawn amount should match the requested amount"
+  //     );
+
+  //     console.log(
+  //       "Withdrawn amount:",
+  //       withdrawnAmount / LAMPORTS_PER_SOL,
+  //       "SOL"
+  //     );
   //   } catch (e) {
-  //     console.error("Error getting the result:", e);
+  //     console.error("Error withdrawing funds from treasury:", e);
   //     throw e;
   //   }
   // });
