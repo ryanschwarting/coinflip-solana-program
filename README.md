@@ -220,7 +220,7 @@ This function determines the game result based on the received randomness and ha
 ```shell
 🎲 Starting Solana Coinflip Game Test Suite 🎲
 
-👤 Player's Public Key: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
+👤 Players Public Key: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
 🏠 Generated Room ID: 8bbs5BdS
 💰 Bet Amount: 0.1 SOL
 🎰 Coinflip Game Address: 6hfrfB87x5QmN8A6KRzBbhESzGWbERsu9zV8KWcGZA6h
@@ -235,7 +235,7 @@ This function determines the game result based on the received randomness and ha
 🎬 Starting: Create Coinflip Game Test
 👤 Initial Player Balance: 22.94844116 SOL
 🏦 Initial House Treasury Balance: 1.22061596 SOL
-🎲 Player's Choice: Option 1
+🎲 Players Choice: Option 1
 ✅ Coinflip game created successfully!
 📜 Transaction Signature: dHrR9trGAfyXBSAhgsKiAHUiveFVKoQqwRyJ6ruYRXA7KQKzrw67rQ2pZgAfGbKNbQUg3CqXsQmh3zrb4v3RWdC
 
