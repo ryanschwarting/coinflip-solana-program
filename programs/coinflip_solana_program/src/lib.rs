@@ -75,7 +75,7 @@ pub mod solana_coinflip_game {
         }
 
         let current_time = ctx.accounts.clock.unix_timestamp;
-        if current_time - ctx.accounts.coinflip.last_play_time < 60 {
+        if current_time - ctx.accounts.coinflip.last_play_time < 30 {
             // 1 minute cooldown
             return err!(RateLimitError::TooManyRequests);
         }
