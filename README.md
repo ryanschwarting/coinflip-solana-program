@@ -10,6 +10,7 @@
   - [Main Functions](#main-functions)
   - [Game Logic](#game-logic)
 - [Detailed Contract Explanation](#detailed-contract-explanation)
+- [Connecting to a Frontend](#test-logs-to-terminal)
 - [Connecting to a Frontend](#connecting-to-a-frontend)
   - [Setting up web3.js](#setting-up-web3js)
   - [Interacting with the Contract](#interacting-with-the-contract)
@@ -214,7 +215,7 @@ pub fn result_coinflip(
 
 This function determines the game result based on the received randomness and handles the payout accordingly.
 
-### Test Case: Test logs to Terminal
+### Test Logs to Terminal
 
 🎲 Starting Solana Coinflip Game Test Suite 🎲
 
