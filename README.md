@@ -352,11 +352,9 @@ House Treasury: +0.1000 SOL
 
 1. Install required dependencies:
 
-   ```bash
-   npm install @solana/web3.js @project-serum/anchor
-   ```
-
-````
+```bash
+ npm install @solana/web3.js @project-serum/anchor
+```
 
 2. Set up a connection to the Solana network:
 
@@ -507,4 +505,3 @@ Contributions are welcome! Please follow these steps:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-````
