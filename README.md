@@ -217,80 +217,81 @@ This function determines the game result based on the received randomness and ha
 
 ### Test Logs to Terminal
 
+```shell
 🎲 Starting Solana Coinflip Game Test Suite 🎲
 
-👤 Player's Public Key: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc  
-🏠 Generated Room ID: 8bbs5BdS  
-💰 Bet Amount: 0.1 SOL  
-🎰 Coinflip Game Address: 6hfrfB87x5QmN8A6KRzBbhESzGWbERsu9zV8KWcGZA6h  
-🏦 House Treasury Address: HF58NX1G9Yeump2AVH3KqApcar7yLpgoZBPtS4MxFfLc  
-🌐 Network State Address: 5ER1oENnV4srxYdAynUfRzWeQCPQaqMiAp4VqyMbSqnK  
+👤 Player's Public Key: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
+🏠 Generated Room ID: 8bbs5BdS
+💰 Bet Amount: 0.1 SOL
+🎰 Coinflip Game Address: 6hfrfB87x5QmN8A6KRzBbhESzGWbERsu9zV8KWcGZA6h
+🏦 House Treasury Address: HF58NX1G9Yeump2AVH3KqApcar7yLpgoZBPtS4MxFfLc
+🌐 Network State Address: 5ER1oENnV4srxYdAynUfRzWeQCPQaqMiAp4VqyMbSqnK
 💼 ORAO Treasury Address: 9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR
 
 🔮 Generated Force Public Key: 4jwccKFJzmutWWeo8pe1MTRkGmvX3dKVm1x4Zq98ac9Z
 
 ## Create Coinflip Game Test
 
-🎬 Starting: Create Coinflip Game Test  
-👤 Initial Player Balance: 22.94844116 SOL  
-🏦 Initial House Treasury Balance: 1.22061596 SOL  
-🎲 Player's Choice: Option 1  
-✅ Coinflip game created successfully!  
+🎬 Starting: Create Coinflip Game Test
+👤 Initial Player Balance: 22.94844116 SOL
+🏦 Initial House Treasury Balance: 1.22061596 SOL
+🎲 Player's Choice: Option 1
+✅ Coinflip game created successfully!
 📜 Transaction Signature: dHrR9trGAfyXBSAhgsKiAHUiveFVKoQqwRyJ6ruYRXA7KQKzrw67rQ2pZgAfGbKNbQUg3CqXsQmh3zrb4v3RWdC
 
-📊 Game Data After Creation:  
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc  
-Bet Amount: 0.1 SOL  
-Player Choice: {"option1":{}}  
+📊 Game Data After Creation:
+Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
+Bet Amount: 0.1 SOL
+Player Choice: {"option1":{}}
 Game Status: {"waiting":{}}
 
 ✔ Create coinflip game (1605ms)
 
 ### Play the Game Test
 
-🎮 Starting: Play the Game Test  
-🔮 New Force Public Key: ERjbtH2eoe6hbZF1jRNWhR22BwMT4T7RQ3yPgUVU7d1z  
-🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K  
-✅ Game has started successfully!  
+🎮 Starting: Play the Game Test
+🔮 New Force Public Key: ERjbtH2eoe6hbZF1jRNWhR22BwMT4T7RQ3yPgUVU7d1z
+🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K
+✅ Game has started successfully!
 📜 Transaction Signature: 2eodrSxGoDPt8q1RLGe8A4fS9deddqVCuVu5a2u41R93cmZfk2pVqA8nCujM3DZHEs6bXAYeB4jTyC2EHwVo2Cse
 
-📊 Game State After Play:  
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc  
-Bet Amount: 0.1 SOL  
-Player Choice: {"option1":{}}  
+📊 Game State After Play:
+Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
+Bet Amount: 0.1 SOL
+Player Choice: {"option1":{}}
 Game Status: {"processing":{}}
 
-✅ Assertion passed: Game status is 'processing'  
+✅ Assertion passed: Game status is 'processing'
 ✔ Play the game (828ms)
 
 ### Wait for Randomness Fulfillment Test
 
-⏳ Starting: Wait for Randomness Fulfillment Test  
-Waiting for ORAO VRF to fulfill the randomness request...  
-✅ Randomness has been fulfilled by ORAO VRF  
-We can now proceed to get the game result  
+⏳ Starting: Wait for Randomness Fulfillment Test
+Waiting for ORAO VRF to fulfill the randomness request...
+✅ Randomness has been fulfilled by ORAO VRF
+We can now proceed to get the game result
 ✔ Wait for randomness fulfillment (2387ms)
 
 ### Get the Game Result Test
 
-🏁 Starting: Get the Game Result Test  
-🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K  
-✅ Game result has been processed successfully!  
+🏁 Starting: Get the Game Result Test
+🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K
+✅ Game result has been processed successfully!
 📜 Transaction Signature: mQAs6BgMNNzkqQgSTqHY5XEcdqr4bRiYdZzY165EJBM9WUMFxG5fuEGoBMMyVaZiJpK1QXQafGa1dosvvh8KtX9
 
-📊 Final Game Result:  
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc  
-Bet Amount: 0.1 SOL  
-Player Choice: {"option1":{}}  
-Game Status: {"finished":{}}  
+📊 Final Game Result:
+Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
+Bet Amount: 0.1 SOL
+Player Choice: {"option1":{}}
+Game Status: {"finished":{}}
 Winner: {"option2Wins":{}}
 
-💰 Final Balances:  
-Player balance: 22.83954744 SOL  
+💰 Final Balances:
+Player balance: 22.83954744 SOL
 House Treasury balance: 1.32061596 SOL
 
-📈 Balance Changes:  
-Player: -0.1089 SOL  
+📈 Balance Changes:
+Player: -0.1089 SOL
 House Treasury: +0.1000 SOL
 
 ✔ Get the result (1721ms)
@@ -343,6 +344,7 @@ Player: -0.1089 SOL
 House Treasury: +0.1000 SOL
 
 ✔ Get the result (1721ms)
+```
 
 ## Connecting to a Frontend
 
@@ -353,6 +355,8 @@ House Treasury: +0.1000 SOL
    ```bash
    npm install @solana/web3.js @project-serum/anchor
    ```
+
+````
 
 2. Set up a connection to the Solana network:
 
@@ -503,3 +507,4 @@ Contributions are welcome! Please follow these steps:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+````
