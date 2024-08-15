@@ -1,6 +1,7 @@
 # Solana Coinflip Game
 
 ## Table of Contents
+
 - [Introduction](#introduction)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
@@ -96,6 +97,7 @@ pub enum Status {
 ### Game Logic
 
 The game uses ORAO VRF to generate a random number between 0 and 199:
+
 - 0-9 (5% chance): Tie
 - 10-104 (47.5% chance): Option1 wins
 - 105-199 (47.5% chance): Option2 wins
@@ -217,6 +219,7 @@ This function determines the game result based on the received randomness and ha
 ### Setting up web3.js
 
 1. Install required dependencies:
+
    ```bash
    npm install @solana/web3.js @project-serum/anchor
    ```
@@ -228,16 +231,18 @@ This function determines the game result based on the received randomness and ha
    import { Program, Provider, web3 } from "@project-serum/anchor";
    import { SolanaCoinflipGame } from "./idl/solana_coinflip_game";
 
-   const network = clusterApiUrl('devnet');
+   const network = clusterApiUrl("devnet");
    const opts = {
-     preflightCommitment: "processed"
+     preflightCommitment: "processed",
    };
 
    const connection = new Connection(network, opts.preflightCommitment);
 
    const getProvider = async () => {
      const provider = new Provider(
-       connection, window.solana, opts.preflightCommitment,
+       connection,
+       window.solana,
+       opts.preflightCommitment
      );
      return provider;
    };
@@ -302,22 +307,20 @@ Here are some examples of how to interact with the contract using web3.js:
      const force = web3.Keypair.generate().publicKey;
      const randomPDA = await orao.randomnessAccountAddress(force.toBuffer());
 
-     await program.rpc.playCoinflip(
-       roomId,
-       Array.from(force.toBuffer()),
-       {
-         accounts: {
-           player: provider.wallet.publicKey,
-           coinflip: coinflipPDA,
-           houseTreasury: houseTreasuryPDA,
-           oraoTreasury: new web3.PublicKey("9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"),
-           vrf: orao.programId,
-           config: orao.networkStateAccountAddress(),
-           random: randomPDA,
-           systemProgram: web3.SystemProgram.programId,
-         },
-       }
-     );
+     await program.rpc.playCoinflip(roomId, Array.from(force.toBuffer()), {
+       accounts: {
+         player: provider.wallet.publicKey,
+         coinflip: coinflipPDA,
+         houseTreasury: houseTreasuryPDA,
+         oraoTreasury: new web3.PublicKey(
+           "9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"
+         ),
+         vrf: orao.programId,
+         config: orao.networkStateAccountAddress(),
+         random: randomPDA,
+         systemProgram: web3.SystemProgram.programId,
+       },
+     });
 
      return force;
    };
@@ -337,22 +340,20 @@ Here are some examples of how to interact with the contract using web3.js:
      );
      const randomPDA = await orao.randomnessAccountAddress(force.toBuffer());
 
-     await program.rpc.resultCoinflip(
-       roomId,
-       Array.from(force.toBuffer()),
-       {
-         accounts: {
-           player: provider.wallet.publicKey,
-           coinflip: coinflipPDA,
-           houseTreasury: houseTreasuryPDA,
-           oraoTreasury: new web3.PublicKey("9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"),
-           vrf: orao.programId,
-           config: orao.networkStateAccountAddress(),
-           random: randomPDA,
-           systemProgram: web3.SystemProgram.programId,
-         },
-       }
-     );
+     await program.rpc.resultCoinflip(roomId, Array.from(force.toBuffer()), {
+       accounts: {
+         player: provider.wallet.publicKey,
+         coinflip: coinflipPDA,
+         houseTreasury: houseTreasuryPDA,
+         oraoTreasury: new web3.PublicKey(
+           "9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"
+         ),
+         vrf: orao.programId,
+         config: orao.networkStateAccountAddress(),
+         random: randomPDA,
+         systemProgram: web3.SystemProgram.programId,
+       },
+     });
 
      const gameState = await program.account.coinflip.fetch(coinflipPDA);
      return gameState.result;
