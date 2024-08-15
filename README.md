@@ -295,55 +295,6 @@ Player: -0.1089 SOL
 House Treasury: +0.1000 SOL
 
 ✔ Get the result (1721ms)
-
-### Play the Game Test
-
-🎮 Starting: Play the Game Test
-🔮 New Force Public Key: ERjbtH2eoe6hbZF1jRNWhR22BwMT4T7RQ3yPgUVU7d1z
-🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K
-✅ Game has started successfully!
-📜 Transaction Signature: 2eodrSxGoDPt8q1RLGe8A4fS9deddqVCuVu5a2u41R93cmZfk2pVqA8nCujM3DZHEs6bXAYeB4jTyC2EHwVo2Cse
-
-📊 Game State After Play:
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
-Bet Amount: 0.1 SOL
-Player Choice: {"option1":{}}
-Game Status: {"processing":{}}
-
-✅ Assertion passed: Game status is 'processing'
-✔ Play the game (828ms)
-
-### Wait for Randomness Fulfillment Test
-
-⏳ Starting: Wait for Randomness Fulfillment Test
-Waiting for ORAO VRF to fulfill the randomness request...
-✅ Randomness has been fulfilled by ORAO VRF
-We can now proceed to get the game result
-✔ Wait for randomness fulfillment (2387ms)
-
-### Get the Game Result Test
-
-🏁 Starting: Get the Game Result Test
-🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K
-✅ Game result has been processed successfully!
-📜 Transaction Signature: mQAs6BgMNNzkqQgSTqHY5XEcdqr4bRiYdZzY165EJBM9WUMFxG5fuEGoBMMyVaZiJpK1QXQafGa1dosvvh8KtX9
-
-📊 Final Game Result:
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
-Bet Amount: 0.1 SOL
-Player Choice: {"option1":{}}
-Game Status: {"finished":{}}
-Winner: {"option2Wins":{}}
-
-💰 Final Balances:
-Player balance: 22.83954744 SOL
-House Treasury balance: 1.32061596 SOL
-
-📈 Balance Changes:
-Player: -0.1089 SOL
-House Treasury: +0.1000 SOL
-
-✔ Get the result (1721ms)
 ```
 
 ## Connecting to a Frontend
@@ -505,3 +456,7 @@ Contributions are welcome! Please follow these steps:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+```
+
+```
