@@ -10,7 +10,7 @@
   - [Main Functions](#main-functions)
   - [Game Logic](#game-logic)
 - [Detailed Contract Explanation](#detailed-contract-explanation)
-- [Connecting to a Frontend](#test-logs-to-terminal)
+- [Test Logs to Terminal](#test-logs-to-terminal)
 - [Connecting to a Frontend](#connecting-to-a-frontend)
   - [Setting up web3.js](#setting-up-web3js)
   - [Interacting with the Contract](#interacting-with-the-contract)
