@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-solana_coinflip_game = "AsyCUAG7EPbibhdfAQpZL8gvNuwzQjNBWNfWw3MKgRmA"
+solana_coinflip_game = "CXSq66cv9PLbAZKiMmmt4ijfAFzFqTufnz1zSSNZCQfn"
 
 [registry]
 url = "https://api.apr.dev"
