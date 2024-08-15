@@ -214,7 +214,7 @@ pub fn result_coinflip(
 
 This function determines the game result based on the received randomness and handles the payout accordingly.
 
-### Test Case: Solana Coinflip Game
+### Test Case: Test logs to Terminal
 
 🎲 Starting Solana Coinflip Game Test Suite 🎲
 
@@ -293,12 +293,6 @@ Player: -0.1089 SOL
 House Treasury: +0.1000 SOL
 
 ✔ Get the result (1721ms)
-
-```
-
-```
-
-This formatted version provides a clear and structured representation of the test case, suitable for inclusion in a README.md file. It uses markdown headers, code blocks, and preserves the emoji for better readability.
 
 ## Connecting to a Frontend
 
