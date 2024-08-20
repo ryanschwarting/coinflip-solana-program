@@ -150,16 +150,23 @@ pub fn create_coinflip(
     amount: u64,
     player_choice: PlayerChoice,
 ) -> Result<()> {
-    // ... (input validation)
+    // ... (validations)
 
-    let coinflip = &mut ctx.accounts.coinflip;
-    coinflip.player = ctx.accounts.player.key();
-    coinflip.amount = amount;
-    coinflip.player_choice = player_choice;
-    coinflip.status = Status::Waiting;
-    coinflip.last_play_time = ctx.accounts.clock.unix_timestamp;
+    let ix = solana_program::system_instruction::transfer(
+        &ctx.accounts.player.key(),
+        &ctx.accounts.house_treasury.key(),
+        amount,
+    );
+    solana_program::program::invoke(
+        &ix,
+        &[
+            ctx.accounts.player.to_account_info(),
+            ctx.accounts.house_treasury.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+    )?;
 
-    // ... (transfer funds to house treasury)
+    // ... (update house treasury and coinflip state)
 
     Ok(())
 }
@@ -175,11 +182,20 @@ pub fn play_coinflip(
     room_id: String,
     force: [u8; 32],
 ) -> Result<()> {
-    let room = &mut ctx.accounts.coinflip;
-    room.force = force;
-    room.status = Status::Processing;
+    // ... (validations)
 
-    // ... (request randomness from ORAO VRF)
+    let cpi_program = ctx.accounts.vrf.to_account_info();
+    let cpi_accounts = orao_solana_vrf::cpi::accounts::Request {
+        payer: ctx.accounts.player.to_account_info(),
+        network_state: ctx.accounts.config.to_account_info(),
+        treasury: ctx.accounts.orao_treasury.to_account_info(),
+        request: ctx.accounts.random.to_account_info(),
+        system_program: ctx.accounts.system_program.to_account_info(),
+    };
+    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+    orao_solana_vrf::cpi::request(cpi_ctx, force)?;
+
+    // ... (update game state)
 
     Ok(())
 }
@@ -195,17 +211,26 @@ pub fn result_coinflip(
     room_id: String,
     force: [u8; 32],
 ) -> Result<()> {
-    // ... (retrieve randomness and determine result)
+    // ... (validations and randomness retrieval)
 
-    let payout = match (game_result, &coinflip.player_choice) {
-        (GameResult::Tie, _) => coinflip.amount,
-        (GameResult::Option1Wins, PlayerChoice::Option1) |
-        (GameResult::Option2Wins, PlayerChoice::Option2) => coinflip.amount * 2,
-        _ => 0,
+    let game_result = if result < 10 {
+        // 0-9 (5% chance)
+        GameResult::Tie
+    } else if result < 105 {
+        // 10-104 (47.5% chance)
+        GameResult::Option1Wins
+    } else {
+        // 105-199 (47.5% chance)
+        GameResult::Option2Wins
     };
 
-    // ... (handle payout)
+    // ... (payout logic)
 
+    msg!(
+        "Coinflip game in room {} has concluded with result {:?}",
+        room_id,
+        game_result
+    );
     coinflip.result = Some(game_result);
     coinflip.status = Status::Finished;
 
