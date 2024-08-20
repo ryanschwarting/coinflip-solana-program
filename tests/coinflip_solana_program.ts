@@ -21,8 +21,10 @@ export type PlayerChoice =
     }
   | {
       option2: {};
+    }
+  | {
+      tie: {};
     };
-
 function randomString(length = 8) {
   let result = "";
   const characters =
@@ -54,7 +56,7 @@ describe("solana-coinflip-game", () => {
   const room_id = randomString();
   console.log(`🏠 Generated Room ID: ${room_id}`);
 
-  const amount = new BN(LAMPORTS_PER_SOL * 0.1);
+  const amount = new BN(LAMPORTS_PER_SOL * 0.05);
   console.log(`💰 Bet Amount: ${amount.toNumber() / LAMPORTS_PER_SOL} SOL`);
 
   const [coinflip] = PublicKey.findProgramAddressSync(
@@ -171,7 +173,7 @@ describe("solana-coinflip-game", () => {
       );
 
       const playerChoice: PlayerChoice = { option1: {} };
-      console.log(`🎲 Player's Choice: Option 1`);
+      console.log(`🎲 Player's Choice: Option1`);
 
       const tx = await program.methods
         .createCoinflip(room_id, amount, playerChoice)

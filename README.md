@@ -68,6 +68,7 @@ pub struct Coinflip {
 pub enum PlayerChoice {
     Option1,
     Option2,
+    Tie,
 }
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
@@ -150,7 +151,30 @@ pub fn create_coinflip(
     amount: u64,
     player_choice: PlayerChoice,
 ) -> Result<()> {
-    // ... (validations)
+    require!(
+        !ctx.accounts.house_treasury.paused,
+        ProgramError::ProgramPaused
+    );
+    require!(amount >= MIN_BET, InvalidAmount::TooLow);
+    require!(amount <= MAX_BET, InvalidAmount::TooHigh);
+    require!(room_id.len() <= 32, InvalidInput::RoomIdTooLong);
+
+    let house_balance = ctx.accounts.house_treasury.balance;
+    let required_balance = match player_choice {
+        PlayerChoice::Tie => amount
+            .checked_mul(6)
+            .ok_or(ProgramError::ArithmeticOverflow)?,
+        _ => amount
+            .checked_mul(2)
+            .ok_or(ProgramError::ArithmeticOverflow)?,
+    };
+
+    require!(
+        house_balance >= required_balance,
+        HouseError::InsufficientFunds
+    );
+
+    // ... (rate limiting check)
 
     let ix = solana_program::system_instruction::transfer(
         &ctx.accounts.player.key(),
