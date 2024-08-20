@@ -492,6 +492,58 @@ Here are some examples of how to interact with the contract using web3.js:
    };
    ```
 
+## Solana vs Ethereum: Key Differences for Frontend Developers
+
+When transitioning from Ethereum to Solana development, it's important to understand some key differences:
+
+1. Account Model:
+
+   - Ethereum: Uses a global state model where contract data is stored in contract storage.
+   - Solana: Uses an account-based model where each piece of data is stored in its own account.
+
+2. Transaction Structure:
+
+   - Ethereum: Transactions typically interact with a single contract method.
+   - Solana: Transactions can contain multiple instructions interacting with different programs.
+
+3. State Management:
+
+   - Ethereum: State changes are implicit in function calls.
+   - Solana: State changes often require explicitly passing the account to be modified.
+
+4. Account Creation:
+
+   - Ethereum: Accounts are created implicitly.
+   - Solana: Program-derived addresses (PDAs) need to be explicitly created.
+
+5. Gas and Fees:
+
+   - Ethereum: Uses gas for computation and storage, with prices varying based on network congestion.
+   - Solana: Has a fixed fee structure, generally much lower than Ethereum.
+
+6. Wallets:
+
+   - Ethereum: MetaMask is commonly used.
+   - Solana: Phantom, Solflare, or other Solana-specific wallets are used.
+
+7. RPC Endpoints:
+
+   - Both use RPC, but Solana's endpoints and methods differ from Ethereum's.
+
+8. Programming Model:
+
+   - Ethereum: Typically uses Solidity with a more traditional OOP approach.
+   - Solana: Uses Rust with a focus on instruction-based programming.
+
+9. Randomness:
+
+   - Ethereum: Often uses oracles like Chainlink VRF.
+   - Solana: This project uses ORAO VRF, showcasing Solana's integration with external VRF services.
+
+10. Frontend Libraries:
+    - Ethereum: web3.js or ethers.js
+    - Solana: @solana/web3.js and @project-serum/anchor
+
 ## Contributing
 
 Contributions are welcome! Please follow these steps:
