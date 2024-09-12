@@ -6,7 +6,7 @@ mod misc;
 mod pda;
 use crate::pda::*;
 
-declare_id!("BMQg6vSsT8zbjEmCdgaqVpSvD8E3eUzPUsasbqGRHHaA");
+declare_id!("3yRV89mke5zcbGABf8NDWaf7ffaKS7JezgnThozx7P13");
 
 pub const MIN_BET: u64 = 5 * LAMPORTS_PER_SOL / 100; // 0.05 SOL
 pub const MAX_BET: u64 = 10 * LAMPORTS_PER_SOL; // 10 SOL
@@ -59,11 +59,12 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
-    pub fn create_coinflip(
-        ctx: Context<CreateCoinflip>,
+    pub fn create_and_play_coinflip(
+        ctx: Context<CreateAndPlayCoinflip>,
         room_id: String,
         amount: u64,
         player_choice: PlayerChoice,
+        force: [u8; 32],
     ) -> Result<()> {
         require!(
             !ctx.accounts.house_treasury.paused,
@@ -87,15 +88,8 @@ pub mod solana_coinflip_game {
             house_balance >= required_balance,
             HouseError::InsufficientFunds
         );
-        let current_time = ctx.accounts.clock.unix_timestamp;
-        require!(
-            current_time
-                .checked_sub(ctx.accounts.coinflip.last_play_time)
-                .ok_or(ProgramError::ArithmeticOverflow)?
-                >= 30,
-            RateLimitError::TooManyRequests
-        );
 
+        // Transfer bet amount from player to house treasury
         let ix = solana_program::system_instruction::transfer(
             &ctx.accounts.player.key(),
             &ctx.accounts.house_treasury.key(),
@@ -117,31 +111,15 @@ pub mod solana_coinflip_game {
             .checked_add(amount)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
+        // Initialize coinflip account
         let coinflip = &mut ctx.accounts.coinflip;
         coinflip.player = ctx.accounts.player.key();
         coinflip.amount = amount;
         coinflip.player_choice = player_choice;
-        coinflip.status = Status::Waiting;
-        coinflip.last_play_time = current_time;
+        coinflip.status = Status::Processing;
+        coinflip.last_play_time = ctx.accounts.clock.unix_timestamp;
 
-        Ok(())
-    }
-
-    pub fn play_coinflip(
-        ctx: Context<PlayCoinflip>,
-        room_id: String,
-        force: [u8; 32],
-    ) -> Result<()> {
-        require!(
-            !ctx.accounts.house_treasury.paused,
-            ProgramError::ProgramPaused
-        );
-        require!(room_id.len() <= 32, InvalidInput::RoomIdTooLong);
-
-        let room = &mut ctx.accounts.coinflip;
-
-        msg!("Room {} game started", room_id);
-
+        // Request randomness from Orao VRF
         let cpi_program = ctx.accounts.vrf.to_account_info();
         let cpi_accounts = orao_solana_vrf::cpi::accounts::Request {
             payer: ctx.accounts.player.to_account_info(),
@@ -153,8 +131,7 @@ pub mod solana_coinflip_game {
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         orao_solana_vrf::cpi::request(cpi_ctx, force)?;
 
-        room.force = force;
-        room.status = Status::Processing;
+        coinflip.force = force;
         msg!("Started game in room {}", room_id);
         Ok(())
     }

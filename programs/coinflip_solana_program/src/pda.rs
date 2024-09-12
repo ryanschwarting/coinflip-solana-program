@@ -202,3 +202,47 @@ pub struct WithdrawHouseFunds<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+#[instruction(room_id: String, amount: u64, player_choice: PlayerChoice, force: [u8; 32])]
+pub struct CreateAndPlayCoinflip<'info> {
+    #[account(mut)]
+    pub player: Signer<'info>,
+
+    #[account(
+        init,
+        payer = player,
+        space = 8 + std::mem::size_of::<Coinflip>(),
+        seeds = [b"coinflip", room_id.as_bytes()],
+        bump
+    )]
+    pub coinflip: Account<'info, Coinflip>,
+
+    #[account(mut)]
+    pub house_treasury: Account<'info, HouseTreasury>,
+
+    /// CHECK: This is the Orao VRF treasury account
+    #[account(mut)]
+    pub orao_treasury: AccountInfo<'info>,
+
+    /// CHECK: Randomness
+    #[account(
+        mut,
+        seeds = [RANDOMNESS_ACCOUNT_SEED.as_ref(), &force],
+        bump,
+        seeds::program = orao_solana_vrf::ID
+    )]
+    pub random: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        seeds = [CONFIG_ACCOUNT_SEED.as_ref()],
+        bump,
+        seeds::program = orao_solana_vrf::ID
+    )]
+    pub config: Account<'info, NetworkState>,
+
+    pub vrf: Program<'info, OraoVrf>,
+    
+    pub system_program: Program<'info, System>,
+    pub clock: Sysvar<'info, Clock>,
+}

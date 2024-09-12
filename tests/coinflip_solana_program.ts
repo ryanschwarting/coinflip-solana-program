@@ -105,7 +105,7 @@ describe("solana-coinflip-game", () => {
   // it("Fund house treasury", async () => {
   //   try {
   //     const tx = await program.methods
-  //       .fundTreasury(new BN(LAMPORTS_PER_SOL * 0.5))
+  //       .fundTreasury(new BN(LAMPORTS_PER_SOL * 0.4))
   //       .accounts({
   //         funder: player.publicKey,
   //         houseTreasury,
@@ -151,8 +151,8 @@ describe("solana-coinflip-game", () => {
   //   }
   // });
 
-  it("Create coinflip game", async () => {
-    console.log("\n🎬 Starting: Create Coinflip Game Test");
+  it("Create and play coinflip game", async () => {
+    console.log("\n🎬 Starting: Create and Play Coinflip Game Test");
     try {
       initialPlayerBalance = new BN(
         await program.provider.connection.getBalance(player.publicKey)
@@ -175,79 +175,52 @@ describe("solana-coinflip-game", () => {
       const playerChoice: PlayerChoice = { option1: {} };
       console.log(`🎲 Player's Choice: Option1`);
 
+      force = Keypair.generate().publicKey;
+      console.log(`🔮 Force Public Key: ${force.toBase58()}`);
+
+      const random = randomnessAccountAddress(force.toBuffer());
+      console.log(`🎲 Random Account Address: ${random.toBase58()}`);
+
       const tx = await program.methods
-        .createCoinflip(room_id, amount, playerChoice)
+        .createAndPlayCoinflip(
+          room_id,
+          amount,
+          playerChoice,
+          Array.from(force.toBuffer())
+        )
         .accounts({
           player: player.publicKey,
           coinflip,
           houseTreasury,
+          oraoTreasury,
+          vrf: vrf.programId,
+          config: networkState,
+          random,
           systemProgram: SystemProgram.programId,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         })
         .rpc();
-      console.log(`✅ Coinflip game created successfully!`);
+
+      console.log(`✅ Coinflip game created and started successfully!`);
       console.log(`📜 Transaction Signature: ${tx}`);
 
       const gameData = await program.account.coinflip.fetch(coinflip);
-      console.log(`\n📊 Game Data After Creation:`);
-      // console.log(`   Room ID: ${gameData.roomId}`);
+      console.log(`\n📊 Game Data After Creation and Play:`);
       console.log(`   Player: ${gameData.player.toBase58()}`);
       console.log(
         `   Bet Amount: ${gameData.amount.toNumber() / LAMPORTS_PER_SOL} SOL`
       );
       console.log(`   Player Choice: ${JSON.stringify(gameData.playerChoice)}`);
       console.log(`   Game Status: ${JSON.stringify(gameData.status)}`);
-    } catch (e) {
-      console.error("❌ Error creating coinflip game:", e);
-      throw e;
-    }
-  });
-
-  it("Play the game", async () => {
-    console.log("\n🎮 Starting: Play the Game Test");
-    try {
-      force = Keypair.generate().publicKey;
-      console.log(`🔮 New Force Public Key: ${force.toBase58()}`);
-
-      const random = randomnessAccountAddress(force.toBuffer());
-      console.log(`🎲 Random Account Address: ${random.toBase58()}`);
-
-      const tx = await program.methods
-        .playCoinflip(room_id, Array.from(force.toBuffer()))
-        .accounts({
-          player: player.publicKey,
-          coinflip: coinflip,
-          houseTreasury: houseTreasury,
-          oraoTreasury: oraoTreasury,
-          vrf: vrf.programId,
-          config: networkState,
-          random,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-
-      console.log(`✅ Game has started successfully!`);
-      console.log(`📜 Transaction Signature: ${tx}`);
-
-      const gameState = await program.account.coinflip.fetch(coinflip);
-      console.log(`\n📊 Game State After Play:`);
-      // console.log(`   Room ID: ${gameState.roomId}`);
-      console.log(`   Player: ${gameState.player.toBase58()}`);
-      console.log(
-        `   Bet Amount: ${gameState.amount.toNumber() / LAMPORTS_PER_SOL} SOL`
-      );
-      console.log(
-        `   Player Choice: ${JSON.stringify(gameState.playerChoice)}`
-      );
-      console.log(`   Game Status: ${JSON.stringify(gameState.status)}`);
 
       assert.deepEqual(
-        gameState.status,
+        gameData.status,
         { processing: {} },
-        "Game status should be 'processing' after play"
+        "Game status should be 'processing' after create and play"
       );
       console.log(`✅ Assertion passed: Game status is 'processing'`);
     } catch (e) {
-      console.error("❌ Error playing the game:", e);
+      console.error("❌ Error creating and playing coinflip game:", e);
       throw e;
     }
   });
@@ -285,7 +258,6 @@ describe("solana-coinflip-game", () => {
 
       const gameResult = await program.account.coinflip.fetch(coinflip);
       console.log(`\n📊 Final Game Result:`);
-      // console.log(`   Room ID: ${gameResult.roomId}`);
       console.log(`   Player: ${gameResult.player.toBase58()}`);
       console.log(
         `   Bet Amount: ${gameResult.amount.toNumber() / LAMPORTS_PER_SOL} SOL`

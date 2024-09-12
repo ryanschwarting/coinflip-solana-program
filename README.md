@@ -21,7 +21,7 @@
 
 This project implements a decentralized coinflip game on the Solana blockchain. It leverages the Anchor framework for Solana development and integrates with ORAO's Verifiable Random Function (VRF) to ensure fair and provably random outcomes.
 
-The game allows players to bet SOL on a coinflip, with the house acting as the counterparty. The smart contract manages game creation, gameplay, result determination, and payouts.
+The game allows players to bet SOL on a coinflip, with the house acting as the counterparty. The program manages game creation, gameplay, result determination, and payouts.
 
 ## Features
 
@@ -90,11 +90,10 @@ pub enum Status {
 
 1. `initialize_house`: Initializes the house treasury.
 2. `fund_treasury`: Allows funding the house treasury.
-3. `create_coinflip`: Creates a new coinflip game.
-4. `play_coinflip`: Initiates the gameplay and requests randomness.
-5. `result_coinflip`: Determines the game result and handles payouts.
-6. `toggle_pause`: Pauses or unpauses the game contract.
-7. `withdraw_house_funds`: Allows the house to withdraw funds.
+3. `create_and_play_coinflip`: Creates a new coinflip game and initiates gameplay.
+4. `result_coinflip`: Determines the game result and handles payouts.
+5. `toggle_pause`: Pauses or unpauses the game contract.
+6. `withdraw_house_funds`: Allows the house to withdraw funds.
 
 ### Game Logic
 
@@ -142,14 +141,15 @@ pub fn initialize_house(ctx: Context<InitializeHouse>) -> Result<()> {
 
 This function initializes the house treasury with zero balance and sets it as not paused.
 
-#### create_coinflip
+#### create_and_play_coinflip
 
 ```rust
-pub fn create_coinflip(
-    ctx: Context<CreateCoinflip>,
+pub fn create_and_play_coinflip(
+    ctx: Context<CreateAndPlayCoinflip>,
     room_id: String,
     amount: u64,
     player_choice: PlayerChoice,
+    force: [u8; 32],
 ) -> Result<()> {
     require!(
         !ctx.accounts.house_treasury.paused,
@@ -192,22 +192,6 @@ pub fn create_coinflip(
 
     // ... (update house treasury and coinflip state)
 
-    Ok(())
-}
-```
-
-This function creates a new coinflip game, validating the input and transferring the bet amount to the house treasury.
-
-#### play_coinflip
-
-```rust
-pub fn play_coinflip(
-    ctx: Context<PlayCoinflip>,
-    room_id: String,
-    force: [u8; 32],
-) -> Result<()> {
-    // ... (validations)
-
     let cpi_program = ctx.accounts.vrf.to_account_info();
     let cpi_accounts = orao_solana_vrf::cpi::accounts::Request {
         payer: ctx.accounts.player.to_account_info(),
@@ -225,7 +209,7 @@ pub fn play_coinflip(
 }
 ```
 
-This function initiates the gameplay by requesting randomness from the ORAO VRF.
+This function creates a new coinflip game, validates the input, transfers the bet amount to the house treasury, and immediately initiates the gameplay by requesting randomness from the ORAO VRF.
 
 #### result_coinflip
 
@@ -264,285 +248,30 @@ pub fn result_coinflip(
 
 This function determines the game result based on the received randomness and handles the payout accordingly.
 
-### Test Logs to Terminal
+## Test Suite
 
-```shell
-🎲 Starting Solana Coinflip Game Test Suite 🎲
+The test suite (`coinflip_solana_program.ts`) includes the following main tests:
 
-👤 Players Public Key: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
-🏠 Generated Room ID: 8bbs5BdS
-💰 Bet Amount: 0.1 SOL
-🎰 Coinflip Game Address: 6hfrfB87x5QmN8A6KRzBbhESzGWbERsu9zV8KWcGZA6h
-🏦 House Treasury Address: HF58NX1G9Yeump2AVH3KqApcar7yLpgoZBPtS4MxFfLc
-🌐 Network State Address: 5ER1oENnV4srxYdAynUfRzWeQCPQaqMiAp4VqyMbSqnK
-💼 ORAO Treasury Address: 9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR
+1. "Create and play coinflip game": Tests the creation and initiation of a new game.
+2. "Wait for randomness fulfillment": Waits for the Orao VRF to fulfill the randomness request.
+3. "Get the result": Retrieves and processes the game result.
 
-🔮 Generated Force Public Key: 4jwccKFJzmutWWeo8pe1MTRkGmvX3dKVm1x4Zq98ac9Z
+Additional tests for initializing the house treasury, funding the treasury, toggling the pause state, and withdrawing funds are included but commented out in the current version.
 
-## Create Coinflip Game Test
+## Frontend Considerations
 
-🎬 Starting: Create Coinflip Game Test
-👤 Initial Player Balance: 22.94844116 SOL
-🏦 Initial House Treasury Balance: 1.22061596 SOL
-🎲 Players Choice: Option 1
-✅ Coinflip game created successfully!
-📜 Transaction Signature: dHrR9trGAfyXBSAhgsKiAHUiveFVKoQqwRyJ6ruYRXA7KQKzrw67rQ2pZgAfGbKNbQUg3CqXsQmh3zrb4v3RWdC
+When implementing a frontend for this game, consider the following flow:
 
-📊 Game Data After Creation:
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
-Bet Amount: 0.1 SOL
-Player Choice: {"option1":{}}
-Game Status: {"waiting":{}}
+1. Player initiates the game by calling `create_and_play_coinflip` (first transaction).
+2. Frontend waits for Orao VRF to fulfill the randomness (typically 5-10 seconds).
+3. Player or frontend calls `result_coinflip` to reveal the result (second transaction).
 
-✔ Create coinflip game (1605ms)
+Estimated timings:
 
-### Play the Game Test
-
-🎮 Starting: Play the Game Test
-🔮 New Force Public Key: ERjbtH2eoe6hbZF1jRNWhR22BwMT4T7RQ3yPgUVU7d1z
-🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K
-✅ Game has started successfully!
-📜 Transaction Signature: 2eodrSxGoDPt8q1RLGe8A4fS9deddqVCuVu5a2u41R93cmZfk2pVqA8nCujM3DZHEs6bXAYeB4jTyC2EHwVo2Cse
-
-📊 Game State After Play:
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
-Bet Amount: 0.1 SOL
-Player Choice: {"option1":{}}
-Game Status: {"processing":{}}
-
-✅ Assertion passed: Game status is 'processing'
-✔ Play the game (828ms)
-
-### Wait for Randomness Fulfillment Test
-
-⏳ Starting: Wait for Randomness Fulfillment Test
-Waiting for ORAO VRF to fulfill the randomness request...
-✅ Randomness has been fulfilled by ORAO VRF
-We can now proceed to get the game result
-✔ Wait for randomness fulfillment (2387ms)
-
-### Get the Game Result Test
-
-🏁 Starting: Get the Game Result Test
-🎲 Random Account Address: 22DiBGoAMDWjpymqXysLbtsBB2ajoj66i2J7srXcX38K
-✅ Game result has been processed successfully!
-📜 Transaction Signature: mQAs6BgMNNzkqQgSTqHY5XEcdqr4bRiYdZzY165EJBM9WUMFxG5fuEGoBMMyVaZiJpK1QXQafGa1dosvvh8KtX9
-
-📊 Final Game Result:
-Player: AWFkiMVNxaky86PyeRuQcrkFs5ErH7chsbmvbPpTRGAc
-Bet Amount: 0.1 SOL
-Player Choice: {"option1":{}}
-Game Status: {"finished":{}}
-Winner: {"option2Wins":{}}
-
-💰 Final Balances:
-Player balance: 22.83954744 SOL
-House Treasury balance: 1.32061596 SOL
-
-📈 Balance Changes:
-Player: -0.1089 SOL
-House Treasury: +0.1000 SOL
-
-✔ Get the result (1721ms)
-```
-
-## Connecting to a Frontend
-
-### Setting up web3.js
-
-1. Install required dependencies:
-
-```bash
- npm install @solana/web3.js @project-serum/anchor
-```
-
-2. Set up a connection to the Solana network:
-
-   ```javascript
-   import { Connection, clusterApiUrl } from "@solana/web3.js";
-   import { Program, Provider, web3 } from "@project-serum/anchor";
-   import { SolanaCoinflipGame } from "./idl/solana_coinflip_game";
-
-   const network = clusterApiUrl("devnet");
-   const opts = {
-     preflightCommitment: "processed",
-   };
-
-   const connection = new Connection(network, opts.preflightCommitment);
-
-   const getProvider = async () => {
-     const provider = new Provider(
-       connection,
-       window.solana,
-       opts.preflightCommitment
-     );
-     return provider;
-   };
-   ```
-
-### Interacting with the Contract
-
-Here are some examples of how to interact with the contract using web3.js:
-
-1. Initialize the program:
-
-   ```javascript
-   const provider = await getProvider();
-   const programId = new web3.PublicKey("YOUR_PROGRAM_ID");
-   const program = new Program(SolanaCoinflipGame, programId, provider);
-   ```
-
-2. Create a coinflip game:
-
-   ```javascript
-   const createCoinflip = async (amount, playerChoice) => {
-     const roomId = Math.random().toString(36).substring(7);
-     const [coinflipPDA] = await web3.PublicKey.findProgramAddress(
-       [Buffer.from("coinflip"), Buffer.from(roomId)],
-       program.programId
-     );
-     const [houseTreasuryPDA] = await web3.PublicKey.findProgramAddress(
-       [Buffer.from("house_treasury")],
-       program.programId
-     );
-
-     await program.rpc.createCoinflip(
-       roomId,
-       new BN(amount),
-       { [playerChoice.toLowerCase()]: {} },
-       {
-         accounts: {
-           player: provider.wallet.publicKey,
-           coinflip: coinflipPDA,
-           houseTreasury: houseTreasuryPDA,
-           systemProgram: web3.SystemProgram.programId,
-         },
-       }
-     );
-
-     return roomId;
-   };
-   ```
-
-3. Play the game:
-
-   ```javascript
-   const playCoinflip = async (roomId) => {
-     const [coinflipPDA] = await web3.PublicKey.findProgramAddress(
-       [Buffer.from("coinflip"), Buffer.from(roomId)],
-       program.programId
-     );
-     const [houseTreasuryPDA] = await web3.PublicKey.findProgramAddress(
-       [Buffer.from("house_treasury")],
-       program.programId
-     );
-     const force = web3.Keypair.generate().publicKey;
-     const randomPDA = await orao.randomnessAccountAddress(force.toBuffer());
-
-     await program.rpc.playCoinflip(roomId, Array.from(force.toBuffer()), {
-       accounts: {
-         player: provider.wallet.publicKey,
-         coinflip: coinflipPDA,
-         houseTreasury: houseTreasuryPDA,
-         oraoTreasury: new web3.PublicKey(
-           "9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"
-         ),
-         vrf: orao.programId,
-         config: orao.networkStateAccountAddress(),
-         random: randomPDA,
-         systemProgram: web3.SystemProgram.programId,
-       },
-     });
-
-     return force;
-   };
-   ```
-
-4. Get the result:
-
-   ```javascript
-   const getResult = async (roomId, force) => {
-     const [coinflipPDA] = await web3.PublicKey.findProgramAddress(
-       [Buffer.from("coinflip"), Buffer.from(roomId)],
-       program.programId
-     );
-     const [houseTreasuryPDA] = await web3.PublicKey.findProgramAddress(
-       [Buffer.from("house_treasury")],
-       program.programId
-     );
-     const randomPDA = await orao.randomnessAccountAddress(force.toBuffer());
-
-     await program.rpc.resultCoinflip(roomId, Array.from(force.toBuffer()), {
-       accounts: {
-         player: provider.wallet.publicKey,
-         coinflip: coinflipPDA,
-         houseTreasury: houseTreasuryPDA,
-         oraoTreasury: new web3.PublicKey(
-           "9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"
-         ),
-         vrf: orao.programId,
-         config: orao.networkStateAccountAddress(),
-         random: randomPDA,
-         systemProgram: web3.SystemProgram.programId,
-       },
-     });
-
-     const gameState = await program.account.coinflip.fetch(coinflipPDA);
-     return gameState.result;
-   };
-   ```
-
-## Solana vs Ethereum: Key Differences for Frontend Developers
-
-When transitioning from Ethereum to Solana development, it's important to understand some key differences:
-
-1. Account Model:
-
-   - Ethereum: Uses a global state model where contract data is stored in contract storage.
-   - Solana: Uses an account-based model where each piece of data is stored in its own account.
-
-2. Transaction Structure:
-
-   - Ethereum: Transactions typically interact with a single contract method.
-   - Solana: Transactions can contain multiple instructions interacting with different programs.
-
-3. State Management:
-
-   - Ethereum: State changes are implicit in function calls.
-   - Solana: State changes often require explicitly passing the account to be modified.
-
-4. Account Creation:
-
-   - Ethereum: Accounts are created implicitly.
-   - Solana: Program-derived addresses (PDAs) need to be explicitly created.
-
-5. Gas and Fees:
-
-   - Ethereum: Uses gas for computation and storage, with prices varying based on network congestion.
-   - Solana: Has a fixed fee structure, generally much lower than Ethereum.
-
-6. Wallets:
-
-   - Ethereum: MetaMask is commonly used.
-   - Solana: Phantom, Solflare, or other Solana-specific wallets are used.
-
-7. RPC Endpoints:
-
-   - Both use RPC, but Solana's endpoints and methods differ from Ethereum's.
-
-8. Programming Model:
-
-   - Ethereum: Typically uses Solidity with a more traditional OOP approach.
-   - Solana: Uses Rust with a focus on instruction-based programming.
-
-9. Randomness:
-
-   - Ethereum: Often uses oracles like Chainlink VRF.
-   - Solana: This project uses ORAO VRF, showcasing Solana's integration with external VRF services.
-
-10. Frontend Libraries:
-    - Ethereum: web3.js or ethers.js
-    - Solana: @solana/web3.js and @project-serum/anchor
+- First transaction (create and play): 1-2 seconds
+- Waiting for VRF: 5-10 seconds
+- Second transaction (get result): 1-2 seconds
+- Total estimated time: 10-20 seconds
 
 ## Contributing
 
@@ -557,7 +286,3 @@ Contributions are welcome! Please follow these steps:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-```
-
-```
