@@ -6,7 +6,7 @@ mod misc;
 mod pda;
 use crate::pda::*;
 
-declare_id!("3yRV89mke5zcbGABf8NDWaf7ffaKS7JezgnThozx7P13");
+declare_id!("HLTBPRZKvKxtRHg6gyBGfu1XodqWeAWu3wd2Sc7jsHyf");
 
 pub const MIN_BET: u64 = 5 * LAMPORTS_PER_SOL / 100; // 0.05 SOL
 pub const MAX_BET: u64 = 10 * LAMPORTS_PER_SOL; // 10 SOL
@@ -136,19 +136,8 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
-    pub fn result_coinflip(
-        ctx: Context<ResultCoinflip>,
-        room_id: String,
-        force: [u8; 32],
-    ) -> Result<()> {
-        require!(
-            !ctx.accounts.house_treasury.paused,
-            ProgramError::ProgramPaused
-        );
-        require!(room_id.len() <= 32, InvalidInput::RoomIdTooLong);
-
+    pub fn finalize_game(ctx: Context<FinalizeGame>, room_id: String) -> Result<()> {
         let coinflip = &mut ctx.accounts.coinflip;
-        let house = &mut ctx.accounts.house_treasury;
         let rand_acc = crate::misc::get_account_data(&ctx.accounts.random)?;
 
         let randomness = current_state(&rand_acc);
@@ -158,77 +147,58 @@ pub mod solana_coinflip_game {
         let result = u64::from_le_bytes(result_bytes) % 200;
 
         let game_result = if result < 10 {
-            // 0-9 (5% chance)
             GameResult::Tie
         } else if result < 105 {
-            // 10-104 (47.5% chance)
             GameResult::Option1Wins
         } else {
-            // 105-199 (47.5% chance)
             GameResult::Option2Wins
         };
 
-        msg!("VRF result is: {}", result);
+        coinflip.result = Some(game_result);
+        coinflip.status = Status::Finished;
 
-        let payout = match (game_result, &coinflip.player_choice) {
-            (GameResult::Tie, PlayerChoice::Tie) => {
-                let win_amount = coinflip
-                    .amount
-                    .checked_mul(6) // 5:1 payout plus the original bet
-                    .ok_or(ProgramError::ArithmeticOverflow)?;
-                **house.to_account_info().try_borrow_mut_lamports()? = house
-                    .to_account_info()
-                    .lamports()
-                    .checked_sub(win_amount)
-                    .ok_or(ProgramError::ArithmeticOverflow)?;
-                **ctx.accounts.player.try_borrow_mut_lamports()? = ctx
-                    .accounts
-                    .player
-                    .lamports()
-                    .checked_add(win_amount)
-                    .ok_or(ProgramError::ArithmeticOverflow)?;
-                msg!("Player wins on Tie bet: {}", coinflip.player.to_string());
-                win_amount
-            }
-            (GameResult::Option1Wins, PlayerChoice::Option1)
-            | (GameResult::Option2Wins, PlayerChoice::Option2) => {
-                let win_amount = coinflip
-                    .amount
-                    .checked_mul(2)
-                    .ok_or(ProgramError::ArithmeticOverflow)?;
-                **house.to_account_info().try_borrow_mut_lamports()? = house
-                    .to_account_info()
-                    .lamports()
-                    .checked_sub(win_amount)
-                    .ok_or(ProgramError::ArithmeticOverflow)?;
-                **ctx.accounts.player.try_borrow_mut_lamports()? = ctx
-                    .accounts
-                    .player
-                    .lamports()
-                    .checked_add(win_amount)
-                    .ok_or(ProgramError::ArithmeticOverflow)?;
-                msg!("Player wins: {}", coinflip.player.to_string());
-                win_amount
-            }
-            _ => {
-                msg!("House wins");
-                0 // Player loses their bet
-            }
+        msg!("Game finalized with result: {:?}", game_result);
+        Ok(())
+    }
+
+    pub fn claim_rewards(ctx: Context<ClaimRewards>, room_id: String) -> Result<()> {
+        let coinflip = &ctx.accounts.coinflip;
+        let house = &mut ctx.accounts.house_treasury;
+
+        let player_won = match (coinflip.result.unwrap(), &coinflip.player_choice) {
+            (GameResult::Tie, PlayerChoice::Tie) => true,
+            (GameResult::Option1Wins, PlayerChoice::Option1) => true,
+            (GameResult::Option2Wins, PlayerChoice::Option2) => true,
+            _ => false,
         };
+
+        require!(player_won, GameError::PlayerDidNotWin);
+
+        let payout = match coinflip.result.unwrap() {
+            GameResult::Tie => coinflip.amount.checked_mul(6),
+            _ => coinflip.amount.checked_mul(2),
+        }
+        .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        // Transfer payout from house treasury to player
+        **house.to_account_info().try_borrow_mut_lamports()? = house
+            .to_account_info()
+            .lamports()
+            .checked_sub(payout)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        **ctx.accounts.player.try_borrow_mut_lamports()? = ctx
+            .accounts
+            .player
+            .lamports()
+            .checked_add(payout)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
 
         house.balance = house
             .balance
             .checked_sub(payout)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
-        msg!(
-            "Coinflip game in room {} has concluded with result {:?}",
-            room_id,
-            game_result
-        );
-        coinflip.result = Some(game_result);
-        coinflip.status = Status::Finished;
-
+        msg!("Player wins: {} lamports", payout);
         Ok(())
     }
 
@@ -323,4 +293,10 @@ pub enum RateLimitError {
 pub enum InvalidInput {
     #[msg("Room ID is too long")]
     RoomIdTooLong,
+}
+
+#[error_code]
+pub enum GameError {
+    #[msg("Player did not win this game")]
+    PlayerDidNotWin,
 }
