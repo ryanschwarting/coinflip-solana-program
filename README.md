@@ -91,9 +91,10 @@ pub enum Status {
 1. `initialize_house`: Initializes the house treasury.
 2. `fund_treasury`: Allows funding the house treasury.
 3. `create_and_play_coinflip`: Creates a new coinflip game and initiates gameplay.
-4. `result_coinflip`: Determines the game result and handles payouts.
-5. `toggle_pause`: Pauses or unpauses the game contract.
-6. `withdraw_house_funds`: Allows the house to withdraw funds.
+4. `finalize_game`: Determines the game result and updates the game status.
+5. `claim_rewards`: Allows the player to claim their rewards if they won.
+6. `toggle_pause`: Pauses or unpauses the game contract.
+7. `withdraw_house_funds`: Allows the house to withdraw funds.
 
 ### Game Logic
 
@@ -211,14 +212,10 @@ pub fn create_and_play_coinflip(
 
 This function creates a new coinflip game, validates the input, transfers the bet amount to the house treasury, and immediately initiates the gameplay by requesting randomness from the ORAO VRF.
 
-#### result_coinflip
+#### finalize_game
 
 ```rust
-pub fn result_coinflip(
-    ctx: Context<ResultCoinflip>,
-    room_id: String,
-    force: [u8; 32],
-) -> Result<()> {
+pub fn finalize_game(ctx: Context<FinalizeGame>, room_id: String) -> Result<()> {
     // ... (validations and randomness retrieval)
 
     let game_result = if result < 10 {
@@ -232,7 +229,7 @@ pub fn result_coinflip(
         GameResult::Option2Wins
     };
 
-    // ... (payout logic)
+    // ... (update game state)
 
     msg!(
         "Coinflip game in room {} has concluded with result {:?}",
@@ -246,7 +243,42 @@ pub fn result_coinflip(
 }
 ```
 
-This function determines the game result based on the received randomness and handles the payout accordingly.
+This function determines the game result based on the received randomness and updates the game status to "Finished".
+
+#### claim_rewards
+
+```rust
+pub fn claim_rewards(ctx: Context<ClaimRewards>, room_id: String) -> Result<()> {
+    // ... (validations and payout logic)
+
+    let payout = match coinflip.result {
+        Some(GameResult::Option1Wins) if coinflip.player_choice == PlayerChoice::Option1 => coinflip.amount * 2,
+        Some(GameResult::Option2Wins) if coinflip.player_choice == PlayerChoice::Option2 => coinflip.amount * 2,
+        Some(GameResult::Tie) if coinflip.player_choice == PlayerChoice::Tie => coinflip.amount * 6,
+        _ => 0,
+    };
+
+    if payout > 0 {
+        let ix = solana_program::system_instruction::transfer(
+            &ctx.accounts.house_treasury.key(),
+            &ctx.accounts.player.key(),
+            payout,
+        );
+        solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.house_treasury.to_account_info(),
+                ctx.accounts.player.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+    }
+
+    Ok(())
+}
+```
+
+This function allows the player to claim their rewards if they won the game.
 
 ## Test Suite
 
@@ -258,20 +290,97 @@ The test suite (`coinflip_solana_program.ts`) includes the following main tests:
 
 Additional tests for initializing the house treasury, funding the treasury, toggling the pause state, and withdrawing funds are included but commented out in the current version.
 
-## Frontend Considerations
+## Game Flow for Frontend Developers
 
-When implementing a frontend for this game, consider the following flow:
+The Solana Coinflip Game follows a three-transaction flow to ensure fairness and proper randomness. Here's a breakdown of the process:
 
-1. Player initiates the game by calling `create_and_play_coinflip` (first transaction).
-2. Frontend waits for Orao VRF to fulfill the randomness (typically 5-10 seconds).
-3. Player or frontend calls `result_coinflip` to reveal the result (second transaction).
+1. Create and Play Coinflip Game (1st Transaction):
 
-Estimated timings:
+   - Player initiates this transaction
+   - Specifies: room ID, bet amount, and choice (Option1, Option2, or Tie)
+   - Program checks bet limits and house fund sufficiency
+   - Transfers bet from player to house treasury
+   - Requests randomness from Orao VRF
+   - Creates game with "Processing" status
 
-- First transaction (create and play): 1-2 seconds
-- Waiting for VRF: 5-10 seconds
-- Second transaction (get result): 1-2 seconds
-- Total estimated time: 10-20 seconds
+   ```rust
+   pub fn create_and_play_coinflip(
+       ctx: Context<CreateAndPlayCoinflip>,
+       room_id: String,
+       amount: u64,
+       player_choice: PlayerChoice,
+       force: [u8; 32],
+   ) -> Result<()> {
+       // ... (checks and validations)
+       // Transfer bet amount from player to house treasury
+       // Initialize coinflip account
+       // Request randomness from Orao VRF
+       Ok(())
+   }
+   ```
+
+2. Finalize Game (2nd Transaction):
+
+   - Can be called by anyone, not just the player
+   - Checks if Orao VRF randomness is available
+   - If available, calculates and stores the game result
+   - Updates game status to "Finished"
+
+   ```rust
+   pub fn finalize_game(ctx: Context<FinalizeGame>, room_id: String) -> Result<()> {
+       // Check if randomness is available
+       // Calculate game result
+       // Update game status to Finished
+       Ok(())
+   }
+   ```
+
+3. Claim Rewards (3rd Transaction, only for winners):
+
+   - Should only be called by the player if they've won
+   - Checks if the game is finished and the player has won
+   - If the player won, calculates and transfers the payout from house treasury to player
+
+   ```rust
+   pub fn claim_rewards(ctx: Context<ClaimRewards>, room_id: String) -> Result<()> {
+       // Check if player won
+       // Calculate payout
+       // Transfer payout from house treasury to player
+       Ok(())
+   }
+   ```
+
+Important Considerations:
+
+- The frontend should only prompt winners to claim rewards, saving non-winners from unnecessary transactions.
+- A backend service could be implemented to automatically finalize games, improving user experience but introducing centralization and operational costs.
+- If no backend service is used, the frontend should guide the player to call the finalize function after a short wait (typically 5-10 seconds for Orao VRF to fulfill the randomness).
+
+Estimated Timings:
+
+- 1st Transaction (create and play): 1-2 seconds
+- Waiting for VRF (if manual): 5-10 seconds
+- 2nd Transaction (finalize): 1-2 seconds
+- 3rd Transaction (claim rewards, if won): 1-2 seconds
+
+Total estimated time: 8-16 seconds (can be reduced to 2-4 seconds with automated finalization)
+
+Frontend Implementation Tips:
+
+1. After the first transaction, show a "waiting for result" screen.
+2. If using manual finalization, prompt the user to finalize after 5-10 seconds.
+3. After finalization, check the game result and only show the "Claim Rewards" button if the player won.
+4. Provide clear feedback at each step of the process.
+5. Consider implementing a backend service for automatic finalization to streamline the user experience.
+
+Game Logic:
+The game uses Orao VRF to generate a random number between 0 and 199:
+
+- 0-9 (5% chance): Tie
+- 10-104 (47.5% chance): Option1 wins
+- 105-199 (47.5% chance): Option2 wins
+
+This logic ensures fair and provably random outcomes for each game.
 
 ## Contributing
 
