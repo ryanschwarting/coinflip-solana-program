@@ -249,36 +249,45 @@ This function determines the game result based on the received randomness and up
 
 ```rust
 pub fn claim_rewards(ctx: Context<ClaimRewards>, room_id: String) -> Result<()> {
-    // ... (validations and payout logic)
+    let coinflip = &ctx.accounts.coinflip;
+    let house = &mut ctx.accounts.house_treasury;
 
-    let payout = match coinflip.result {
-        Some(GameResult::Option1Wins) if coinflip.player_choice == PlayerChoice::Option1 => coinflip.amount * 2,
-        Some(GameResult::Option2Wins) if coinflip.player_choice == PlayerChoice::Option2 => coinflip.amount * 2,
-        Some(GameResult::Tie) if coinflip.player_choice == PlayerChoice::Tie => coinflip.amount * 6,
-        _ => 0,
+    let player_won = match (coinflip.result.unwrap(), &coinflip.player_choice) {
+        (GameResult::Option1Wins, PlayerChoice::Option1) => true,
+        (GameResult::Option2Wins, PlayerChoice::Option2) => true,
+        _ => false,
     };
 
-    if payout > 0 {
-        let ix = solana_program::system_instruction::transfer(
-            &ctx.accounts.house_treasury.key(),
-            &ctx.accounts.player.key(),
-            payout,
-        );
-        solana_program::program::invoke(
-            &ix,
-            &[
-                ctx.accounts.house_treasury.to_account_info(),
-                ctx.accounts.player.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-            ],
-        )?;
-    }
+    require!(player_won, GameError::PlayerDidNotWin);
 
+    let payout = coinflip.amount
+        .checked_mul(2)
+        .ok_or(ProgramError::ArithmeticOverflow)?;
+
+    // Transfer payout from house treasury to player
+    **house.to_account_info().try_borrow_mut_lamports()? = house
+        .to_account_info()
+        .lamports()
+        .checked_sub(payout)
+        .ok_or(ProgramError::ArithmeticOverflow)?;
+    **ctx.accounts.player.try_borrow_mut_lamports()? = ctx
+        .accounts
+        .player
+        .lamports()
+        .checked_add(payout)
+        .ok_or(ProgramError::ArithmeticOverflow)?;
+
+    house.balance = house
+        .balance
+        .checked_sub(payout)
+        .ok_or(ProgramError::ArithmeticOverflow)?;
+
+    msg!("Player wins: {} lamports", payout);
     Ok(())
 }
 ```
 
-This function allows the player to claim their rewards if they won the game.
+This function allows the player to claim their rewards if they won.
 
 ## Test Suite
 
@@ -337,14 +346,15 @@ The Solana Coinflip Game follows a three-transaction flow to ensure fairness and
 
 3. Claim Rewards (3rd Transaction, only for winners):
 
-   - Should only be called by the player if they've won
-   - Checks if the game is finished and the player has won
-   - If the player won, calculates and transfers the payout from house treasury to player
+   - Should only be called by the player if they've won (Option1 or Option2 bet matches the result)
+   - Checks if the game is finished and if the player has won
+   - If the player won, calculates and transfers the payout (2x bet) from house treasury to player
+   - If the player lost or the result was a Tie, this transaction will fail
 
    ```rust
    pub fn claim_rewards(ctx: Context<ClaimRewards>, room_id: String) -> Result<()> {
        // Check if player won
-       // Calculate payout
+       // Calculate payout (2x bet)
        // Transfer payout from house treasury to player
        Ok(())
    }
@@ -352,9 +362,9 @@ The Solana Coinflip Game follows a three-transaction flow to ensure fairness and
 
 Important Considerations:
 
-- The frontend should only prompt winners to claim rewards, saving non-winners from unnecessary transactions.
-- A backend service could be implemented to automatically finalize games, improving user experience but introducing centralization and operational costs.
-- If no backend service is used, the frontend should guide the player to call the finalize function after a short wait (typically 5-10 seconds for Orao VRF to fulfill the randomness).
+- The frontend should only prompt winners to claim rewards.
+- Players who lost or tied do not need to perform this transaction.
+- This structure provides a house edge through the Tie result, ensuring long-term sustainability for the game.
 
 Estimated Timings:
 
