@@ -12,12 +12,9 @@ solana_coinflip_game = "HLTBPRZKvKxtRHg6gyBGfu1XodqWeAWu3wd2Sc7jsHyf"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
-wallet = "~/.config/solana/id.json"
-
-[provider]
 cluster = "mainnet"
 wallet = "~/.config/solana/mainnet-deployer.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
