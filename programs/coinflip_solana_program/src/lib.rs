@@ -6,7 +6,7 @@ mod misc;
 mod pda;
 use crate::pda::*;
 
-declare_id!("HLTBPRZKvKxtRHg6gyBGfu1XodqWeAWu3wd2Sc7jsHyf");
+declare_id!("7e4UjnCCHPUdgA88i6CXjFQAoHfG4ZGjbwVVVaCvcKDt");
 
 pub const MIN_BET: u64 = 5 * LAMPORTS_PER_SOL / 100; // 0.05 SOL
 pub const MAX_BET: u64 = 10 * LAMPORTS_PER_SOL; // 10 SOL
