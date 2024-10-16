@@ -67,9 +67,10 @@ describe("solana-coinflip-game", () => {
 
   let force: PublicKey;
   const oraoTreasury = new PublicKey(
-    "9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"
+    "VRFzZoJdhFWL8rkvu87LpKM3RbcVezpMEc6X5GVDr7y"
   );
   //VRFzZoJdhFWL8rkvu87LpKM3RbcVezpMEc6X5GVDr7y mainnet ORAO VRF Treasury address
+  //9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR testnet ORAO VRF Treasury address
   console.log(`💼 ORAO Treasury Address: ${oraoTreasury.toBase58()}`);
 
   before(async () => {

@@ -5,8 +5,8 @@ anchor_version = "0.29.0"
 resolution = true
 skip-lint = false
 
-[programs.devnet]
-solana_coinflip_game = "7e4UjnCCHPUdgA88i6CXjFQAoHfG4ZGjbwVVVaCvcKDt"
+[programs.mainnet]
+solana_coinflip_game = "6MNUPzTs5MMGNrvnCdGyMDJ6mH7ciE3MyzbaeYGwdQxi"
 
 [registry]
 url = "https://api.apr.dev"
