@@ -6,8 +6,10 @@ mod misc;
 mod pda;
 use crate::pda::*;
 
+// Declare the program ID
 declare_id!("6MNUPzTs5MMGNrvnCdGyMDJ6mH7ciE3MyzbaeYGwdQxi");
 
+// Define constants for minimum and maximum bet amounts
 pub const MIN_BET: u64 = 5 * LAMPORTS_PER_SOL / 100; // 0.05 SOL
 pub const MAX_BET: u64 = 10 * LAMPORTS_PER_SOL; // 10 SOL
 
@@ -20,6 +22,7 @@ pub mod solana_coinflip_game {
         system_instruction::{self, transfer},
     };
 
+    // Initialize the house treasury account
     pub fn initialize_house(ctx: Context<InitializeHouse>) -> Result<()> {
         let house = &mut ctx.accounts.house_treasury;
         house.authority = ctx.accounts.authority.key();
@@ -28,13 +31,16 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
+    // Fund the house treasury
     pub fn fund_treasury(ctx: Context<FundTreasury>, amount: u64) -> Result<()> {
+        // Check if the program is paused
         require!(
             !ctx.accounts.house_treasury.paused,
             ProgramError::ProgramPaused
         );
         require!(amount > 0, InvalidAmount::ZeroAmount);
 
+        // Create and execute the transfer instruction
         let ix = system_instruction::transfer(
             &ctx.accounts.funder.key(),
             &ctx.accounts.house_treasury.key(),
@@ -49,6 +55,7 @@ pub mod solana_coinflip_game {
 
         solana_program::program::invoke(&ix, &account_infos)?;
 
+        // Update the house treasury balance
         ctx.accounts.house_treasury.balance = ctx
             .accounts
             .house_treasury
@@ -59,6 +66,7 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
+    // Create and play a coinflip game
     pub fn create_and_play_coinflip(
         ctx: Context<CreateAndPlayCoinflip>,
         room_id: String,
@@ -66,6 +74,7 @@ pub mod solana_coinflip_game {
         player_choice: PlayerChoice,
         force: [u8; 32],
     ) -> Result<()> {
+        // Various checks (program paused, bet amount, room ID length)
         require!(
             !ctx.accounts.house_treasury.paused,
             ProgramError::ProgramPaused
@@ -74,6 +83,7 @@ pub mod solana_coinflip_game {
         require!(amount <= MAX_BET, InvalidAmount::TooHigh);
         require!(room_id.len() <= 32, InvalidInput::RoomIdTooLong);
 
+        // Check if house has enough balance for potential payout
         let house_balance = ctx.accounts.house_treasury.balance;
         let required_balance = match player_choice {
             PlayerChoice::Tie => amount
@@ -104,6 +114,7 @@ pub mod solana_coinflip_game {
             ],
         )?;
 
+        // Update house treasury balance
         ctx.accounts.house_treasury.balance = ctx
             .accounts
             .house_treasury
@@ -136,6 +147,7 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
+    // Finalize the game using the randomness from Orao VRF
     pub fn finalize_game(ctx: Context<FinalizeGame>, room_id: String) -> Result<()> {
         let coinflip = &mut ctx.accounts.coinflip;
         let rand_acc = crate::misc::get_account_data(&ctx.accounts.random)?;
@@ -143,6 +155,7 @@ pub mod solana_coinflip_game {
         let randomness = current_state(&rand_acc);
         require!(randomness != 0, StillProcessing::StillProcessing);
 
+        // Determine game result based on randomness
         let result_bytes = randomness.to_le_bytes();
         let result = u64::from_le_bytes(result_bytes) % 200;
 
@@ -161,10 +174,12 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
+    // Claim rewards for a winning game
     pub fn claim_rewards(ctx: Context<ClaimRewards>, room_id: String) -> Result<()> {
         let coinflip = &ctx.accounts.coinflip;
         let house = &mut ctx.accounts.house_treasury;
 
+        // Check if player won
         let player_won = match (coinflip.result.unwrap(), &coinflip.player_choice) {
             (GameResult::Tie, PlayerChoice::Tie) => true,
             (GameResult::Option1Wins, PlayerChoice::Option1) => true,
@@ -174,6 +189,7 @@ pub mod solana_coinflip_game {
 
         require!(player_won, GameError::PlayerDidNotWin);
 
+        // Calculate payout
         let payout = match coinflip.result.unwrap() {
             GameResult::Tie => coinflip.amount.checked_mul(6),
             _ => coinflip.amount.checked_mul(2),
@@ -193,6 +209,7 @@ pub mod solana_coinflip_game {
             .checked_add(payout)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
+        // Update house treasury balance
         house.balance = house
             .balance
             .checked_sub(payout)
@@ -202,6 +219,7 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
+    // Toggle the paused state of the program
     pub fn toggle_pause(ctx: Context<TogglePause>) -> Result<()> {
         let house = &mut ctx.accounts.house_treasury;
         house.paused = !house.paused;
@@ -209,6 +227,7 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 
+    // Withdraw funds from the house treasury
     pub fn withdraw_house_funds(ctx: Context<WithdrawHouseFunds>, amount: u64) -> Result<()> {
         let house_treasury = &mut ctx.accounts.house_treasury;
         let authority = &ctx.accounts.authority;
@@ -219,6 +238,7 @@ pub mod solana_coinflip_game {
             HouseError::InsufficientFunds
         );
 
+        // Transfer funds from house treasury to authority
         **house_treasury.to_account_info().try_borrow_mut_lamports()? = house_treasury
             .to_account_info()
             .lamports()
@@ -230,6 +250,7 @@ pub mod solana_coinflip_game {
             .checked_add(amount)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
+        // Update house treasury balance
         house_treasury.balance = house_treasury
             .balance
             .checked_sub(amount)
@@ -239,6 +260,8 @@ pub mod solana_coinflip_game {
         Ok(())
     }
 }
+
+// Define account structures and error enums below...
 
 #[derive(Accounts)]
 pub struct TogglePause<'info> {
