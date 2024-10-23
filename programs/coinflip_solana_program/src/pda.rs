@@ -3,6 +3,7 @@ use orao_solana_vrf::program::OraoVrf;
 use orao_solana_vrf::state::NetworkState;
 use orao_solana_vrf::{CONFIG_ACCOUNT_SEED, RANDOMNESS_ACCOUNT_SEED};
 
+// Enum to represent the current status of a game
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
     Waiting,
@@ -16,6 +17,7 @@ impl Default for Status {
     }
 }
 
+// Enum to represent the possible outcomes of a game
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum GameResult {
     Option1Wins,
@@ -23,6 +25,7 @@ pub enum GameResult {
     Tie,
 }
 
+// Enum to represent the player's choice in a game
 #[derive(Debug, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum PlayerChoice {
     Option1,
@@ -30,6 +33,7 @@ pub enum PlayerChoice {
     Tie,
 }
 
+// Account structure for the house treasury
 #[account]
 pub struct HouseTreasury {
     pub authority: Pubkey,
@@ -37,6 +41,7 @@ pub struct HouseTreasury {
     pub paused: bool,
 }
 
+// Account structure for individual coinflip games
 #[account]
 pub struct Coinflip {
     pub player: Pubkey,
@@ -48,6 +53,7 @@ pub struct Coinflip {
     pub last_play_time: i64,
 }
 
+// Context for initializing the house treasury
 #[derive(Accounts)]
 pub struct InitializeHouse<'info> {
     #[account(
@@ -63,6 +69,7 @@ pub struct InitializeHouse<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Context for funding the house treasury
 #[derive(Accounts)]
 pub struct FundTreasury<'info> {
     #[account(mut)]
@@ -76,6 +83,7 @@ pub struct FundTreasury<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Context for creating and playing a coinflip game
 #[derive(Accounts)]
 #[instruction(room_id: String, amount: u64, player_choice: PlayerChoice, force: [u8; 32])]
 pub struct CreateAndPlayCoinflip<'info> {
@@ -98,7 +106,7 @@ pub struct CreateAndPlayCoinflip<'info> {
     #[account(mut)]
     pub orao_treasury: AccountInfo<'info>,
 
-    /// CHECK: Randomness
+    /// CHECK: Randomness account for Orao VRF
     #[account(
         mut,
         seeds = [RANDOMNESS_ACCOUNT_SEED.as_ref(), &force],
@@ -121,6 +129,7 @@ pub struct CreateAndPlayCoinflip<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
+// Context for finalizing a game
 #[derive(Accounts)]
 #[instruction(room_id: String)]
 pub struct FinalizeGame<'info> {
@@ -132,7 +141,7 @@ pub struct FinalizeGame<'info> {
     )]
     pub coinflip: Account<'info, Coinflip>,
 
-    /// CHECK: Randomness
+    /// CHECK: Randomness account for Orao VRF
     #[account(
         seeds = [RANDOMNESS_ACCOUNT_SEED.as_ref(), &coinflip.force],
         bump,
@@ -143,6 +152,7 @@ pub struct FinalizeGame<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Context for claiming rewards
 #[derive(Accounts)]
 #[instruction(room_id: String)]
 pub struct ClaimRewards<'info> {
@@ -163,6 +173,7 @@ pub struct ClaimRewards<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Context for withdrawing funds from the house treasury
 #[derive(Accounts)]
 pub struct WithdrawHouseFunds<'info> {
     #[account(mut)]
