@@ -67,7 +67,7 @@ describe("solana-coinflip-game", () => {
 
   let force: PublicKey;
   const oraoTreasury = new PublicKey(
-    "VRFzZoJdhFWL8rkvu87LpKM3RbcVezpMEc6X5GVDr7y"
+    "9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR"
   );
   //VRFzZoJdhFWL8rkvu87LpKM3RbcVezpMEc6X5GVDr7y mainnet ORAO VRF Treasury address
   //9ZTHWWZDpB36UFe1vszf2KEpt83vwi27jDqtHQ7NSXyR testnet ORAO VRF Treasury address
@@ -126,249 +126,250 @@ describe("solana-coinflip-game", () => {
   //     throw e;
   //   }
   // });
-  it("Withdraw from house treasury", async () => {
-    console.log("\n💸 Starting: Withdraw from House Treasury Test");
+  // it("Withdraw from house treasury", async () => {
+  //   console.log("\n💸 Starting: Withdraw from House Treasury Test");
+  //   try {
+  //     // Check if house treasury exists
+  //     const houseTreasuryAccount = await program.account.houseTreasury.fetch(
+  //       houseTreasury
+  //     );
+  //     console.log("House Treasury Account:", houseTreasuryAccount);
+
+  //     // Get the initial balances
+  //     const initialTreasuryBalance =
+  //       await program.provider.connection.getBalance(houseTreasury);
+  //     const initialDeployerBalance =
+  //       await program.provider.connection.getBalance(player.publicKey);
+
+  //     console.log(
+  //       `🏦 Initial House Treasury Balance: ${
+  //         initialTreasuryBalance / LAMPORTS_PER_SOL
+  //       } SOL`
+  //     );
+  //     console.log(
+  //       `👤 Initial Deployer Balance: ${
+  //         initialDeployerBalance / LAMPORTS_PER_SOL
+  //       } SOL`
+  //     );
+
+  //     // Amount to withdraw (0.1 SOL)
+  //     const withdrawAmount = new BN(LAMPORTS_PER_SOL * 0.1);
+
+  //     // Check if house treasury has enough balance
+  //     if (initialTreasuryBalance < withdrawAmount.toNumber()) {
+  //       throw new Error(
+  //         "House treasury doesn't have enough balance for withdrawal"
+  //       );
+  //     }
+
+  //     // Perform the withdrawal
+  //     const tx = await program.methods
+  //       .withdrawHouseFunds(withdrawAmount)
+  //       .accounts({
+  //         authority: player.publicKey,
+  //         houseTreasury,
+  //         systemProgram: SystemProgram.programId,
+  //       })
+  //       .rpc();
+
+  //     console.log(`✅ Withdrawal transaction successful`);
+  //     console.log(`📜 Transaction Signature: ${tx}`);
+
+  //     // ... rest of the test ...
+  //   } catch (e) {
+  //     console.error("❌ Error withdrawing from house treasury:", e);
+  //     throw e;
+  //   }
+  // });
+
+  it("Create and play coinflip game", async () => {
+    console.log("\n🎬 Starting: Create and Play Coinflip Game Test");
     try {
-      // Check if house treasury exists
-      const houseTreasuryAccount = await program.account.houseTreasury.fetch(
-        houseTreasury
+      initialPlayerBalance = new BN(
+        await program.provider.connection.getBalance(player.publicKey)
       );
-      console.log("House Treasury Account:", houseTreasuryAccount);
+      console.log(
+        `👤 Initial Player Balance: ${
+          initialPlayerBalance.toNumber() / LAMPORTS_PER_SOL
+        } SOL`
+      );
 
-      // Get the initial balances
-      const initialTreasuryBalance =
-        await program.provider.connection.getBalance(houseTreasury);
-      const initialDeployerBalance =
-        await program.provider.connection.getBalance(player.publicKey);
-
+      initialHouseTreasuryBalance = new BN(
+        await program.provider.connection.getBalance(houseTreasury)
+      );
       console.log(
         `🏦 Initial House Treasury Balance: ${
-          initialTreasuryBalance / LAMPORTS_PER_SOL
-        } SOL`
-      );
-      console.log(
-        `👤 Initial Deployer Balance: ${
-          initialDeployerBalance / LAMPORTS_PER_SOL
+          initialHouseTreasuryBalance.toNumber() / LAMPORTS_PER_SOL
         } SOL`
       );
 
-      // Amount to withdraw (0.1 SOL)
-      const withdrawAmount = new BN(LAMPORTS_PER_SOL * 0.1);
+      const playerChoice = { option1: {} };
+      console.log(`🎲 Player's Choice: Option1`);
 
-      // Check if house treasury has enough balance
-      if (initialTreasuryBalance < withdrawAmount.toNumber()) {
-        throw new Error(
-          "House treasury doesn't have enough balance for withdrawal"
-        );
-      }
+      force = Keypair.generate().publicKey;
+      console.log(`🔮 Force Public Key: ${force.toBase58()}`);
 
-      // Perform the withdrawal
+      const random = randomnessAccountAddress(force.toBuffer());
+      console.log(`🎲 Random Account Address: ${random.toBase58()}`);
+
       const tx = await program.methods
-        .withdrawHouseFunds(withdrawAmount)
+        .createAndPlayCoinflip(
+          room_id,
+          amount,
+          playerChoice,
+          Array.from(force.toBuffer())
+        )
         .accounts({
-          authority: player.publicKey,
+          player: player.publicKey,
+          coinflip,
           houseTreasury,
+          oraoTreasury,
+          vrf: vrf.programId,
+          config: networkState,
+          random,
           systemProgram: SystemProgram.programId,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         })
         .rpc();
 
-      console.log(`✅ Withdrawal transaction successful`);
+      console.log(`✅ Coinflip game created and started successfully!`);
       console.log(`📜 Transaction Signature: ${tx}`);
 
-      // ... rest of the test ...
+      const gameData = await program.account.coinflip.fetch(coinflip);
+      console.log(`\n📊 Game Data After Creation and Play:`);
+      console.log(`   Player: ${gameData.player.toBase58()}`);
+      console.log(
+        `   Bet Amount: ${gameData.amount.toNumber() / LAMPORTS_PER_SOL} SOL`
+      );
+      console.log(`   Player Choice: ${JSON.stringify(gameData.playerChoice)}`);
+      console.log(`   Game Status: ${JSON.stringify(gameData.status)}`);
+
+      assert.deepEqual(
+        gameData.status,
+        { processing: {} },
+        "Game status should be 'processing' after create and play"
+      );
+      console.log(`✅ Assertion passed: Game status is 'processing'`);
     } catch (e) {
-      console.error("❌ Error withdrawing from house treasury:", e);
+      console.error("❌ Error creating and playing coinflip game:", e);
       throw e;
     }
   });
 
-  // it("Create and play coinflip game", async () => {
-  //   console.log("\n🎬 Starting: Create and Play Coinflip Game Test");
-  //   try {
-  //     initialPlayerBalance = new BN(
-  //       await program.provider.connection.getBalance(player.publicKey)
-  //     );
-  //     console.log(
-  //       `👤 Initial Player Balance: ${
-  //         initialPlayerBalance.toNumber() / LAMPORTS_PER_SOL
-  //       } SOL`
-  //     );
+  it("Wait for randomness fulfillment", async () => {
+    console.log("\n⏳ Starting: Wait for Randomness Fulfillment Test");
+    console.log(`   Waiting for ORAO VRF to fulfill the randomness request...`);
+    await vrf.waitFulfilled(force.toBuffer());
+    console.log(`✅ Randomness has been fulfilled by ORAO VRF`);
+  });
 
-  //     initialHouseTreasuryBalance = new BN(
-  //       await program.provider.connection.getBalance(houseTreasury)
-  //     );
-  //     console.log(
-  //       `🏦 Initial House Treasury Balance: ${
-  //         initialHouseTreasuryBalance.toNumber() / LAMPORTS_PER_SOL
-  //       } SOL`
-  //     );
+  it("Finalize game", async () => {
+    console.log("\n🏁 Starting: Finalize Game Test");
+    try {
+      const random = randomnessAccountAddress(Buffer.from(force.toBuffer()));
+      console.log(`🎲 Random Account Address: ${random.toBase58()}`);
 
-  //     const playerChoice = { option1: {} };
-  //     console.log(`🎲 Player's Choice: Option1`);
+      const tx = await program.methods
+        .finalizeGame(room_id)
+        .accounts({
+          coinflip,
+          random,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
 
-  //     force = Keypair.generate().publicKey;
-  //     console.log(`🔮 Force Public Key: ${force.toBase58()}`);
+      console.log(`✅ Game finalized successfully!`);
+      console.log(`📜 Transaction Signature: ${tx}`);
 
-  //     const random = randomnessAccountAddress(force.toBuffer());
-  //     console.log(`🎲 Random Account Address: ${random.toBase58()}`);
+      const gameData = await program.account.coinflip.fetch(coinflip);
+      console.log(`\n📊 Game Data After Finalization:`);
+      console.log(`   Player: ${gameData.player.toBase58()}`);
+      console.log(
+        `   Bet Amount: ${gameData.amount.toNumber() / LAMPORTS_PER_SOL} SOL`
+      );
+      console.log(`   Player Choice: ${JSON.stringify(gameData.playerChoice)}`);
+      console.log(`   Game Status: ${JSON.stringify(gameData.status)}`);
+      console.log(`   Game Result: ${JSON.stringify(gameData.result)}`);
 
-  //     const tx = await program.methods
-  //       .createAndPlayCoinflip(
-  //         room_id,
-  //         amount,
-  //         playerChoice,
-  //         Array.from(force.toBuffer())
-  //       )
-  //       .accounts({
-  //         player: player.publicKey,
-  //         coinflip,
-  //         houseTreasury,
-  //         oraoTreasury,
-  //         vrf: vrf.programId,
-  //         config: networkState,
-  //         random,
-  //         systemProgram: SystemProgram.programId,
-  //         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
-  //       })
-  //       .rpc();
+      assert.deepEqual(
+        gameData.status,
+        { finished: {} },
+        "Game status should be 'finished' after finalization"
+      );
+      console.log(`✅ Assertion passed: Game status is 'finished'`);
+    } catch (e) {
+      console.error("❌ Error finalizing game:", e);
+      throw e;
+    }
+  });
 
-  //     console.log(`✅ Coinflip game created and started successfully!`);
-  //     console.log(`📜 Transaction Signature: ${tx}`);
+  it("Claim rewards if won", async () => {
+    console.log("\n💰 Starting: Claim Rewards Test");
+    try {
+      const gameData = await program.account.coinflip.fetch(coinflip);
+      console.log(`\n📊 Game Result:`);
+      console.log(`   Player Choice: ${JSON.stringify(gameData.playerChoice)}`);
+      console.log(`   Game Result: ${JSON.stringify(gameData.result)}`);
 
-  //     const gameData = await program.account.coinflip.fetch(coinflip);
-  //     console.log(`\n📊 Game Data After Creation and Play:`);
-  //     console.log(`   Player: ${gameData.player.toBase58()}`);
-  //     console.log(
-  //       `   Bet Amount: ${gameData.amount.toNumber() / LAMPORTS_PER_SOL} SOL`
-  //     );
-  //     console.log(`   Player Choice: ${JSON.stringify(gameData.playerChoice)}`);
-  //     console.log(`   Game Status: ${JSON.stringify(gameData.status)}`);
+      const playerWon = gameData.result
+        ? (gameData.result.option1Wins && gameData.playerChoice.option1) ||
+          (gameData.result.option2Wins && gameData.playerChoice.option2) ||
+          (gameData.result.tie && gameData.playerChoice.tie)
+        : false;
 
-  //     assert.deepEqual(
-  //       gameData.status,
-  //       { processing: {} },
-  //       "Game status should be 'processing' after create and play"
-  //     );
-  //     console.log(`✅ Assertion passed: Game status is 'processing'`);
-  //   } catch (e) {
-  //     console.error("❌ Error creating and playing coinflip game:", e);
-  //     throw e;
-  //   }
-  // });
+      if (playerWon) {
+        console.log("Player won! Attempting to claim rewards...");
+        const tx = await program.methods
+          .claimRewards(room_id)
+          .accounts({
+            player: player.publicKey,
+            coinflip,
+            houseTreasury,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
 
-  // it("Wait for randomness fulfillment", async () => {
-  //   console.log("\n⏳ Starting: Wait for Randomness Fulfillment Test");
-  //   console.log(`   Waiting for ORAO VRF to fulfill the randomness request...`);
-  //   await vrf.waitFulfilled(force.toBuffer());
-  //   console.log(`✅ Randomness has been fulfilled by ORAO VRF`);
-  // });
+        console.log(`✅ Rewards claimed successfully!`);
+        console.log(`📜 Transaction Signature: ${tx}`);
+      } else {
+        console.log("Player did not win. No rewards to claim.");
+      }
 
-  // it("Finalize game", async () => {
-  //   console.log("\n🏁 Starting: Finalize Game Test");
-  //   try {
-  //     const random = randomnessAccountAddress(Buffer.from(force.toBuffer()));
-  //     console.log(`🎲 Random Account Address: ${random.toBase58()}`);
+      // Fetch final balances
+      const playerBalance = await program.provider.connection.getBalance(
+        player.publicKey
+      );
+      const houseTreasuryBalance = await program.provider.connection.getBalance(
+        houseTreasury
+      );
+      console.log(`\n💰 Final Balances:`);
+      console.log(`   Player balance: ${playerBalance / LAMPORTS_PER_SOL} SOL`);
+      console.log(
+        `   House Treasury balance: ${
+          houseTreasuryBalance / LAMPORTS_PER_SOL
+        } SOL`
+      );
 
-  //     const tx = await program.methods
-  //       .finalizeGame(room_id)
-  //       .accounts({
-  //         coinflip,
-  //         random,
-  //         systemProgram: SystemProgram.programId,
-  //       })
-  //       .rpc();
+      const playerBalanceChange =
+        (playerBalance - initialPlayerBalance.toNumber()) / LAMPORTS_PER_SOL;
+      const treasuryBalanceChange =
+        (houseTreasuryBalance - initialHouseTreasuryBalance.toNumber()) /
+        LAMPORTS_PER_SOL;
 
-  //     console.log(`✅ Game finalized successfully!`);
-  //     console.log(`📜 Transaction Signature: ${tx}`);
-
-  //     const gameData = await program.account.coinflip.fetch(coinflip);
-  //     console.log(`\n📊 Game Data After Finalization:`);
-  //     console.log(`   Player: ${gameData.player.toBase58()}`);
-  //     console.log(
-  //       `   Bet Amount: ${gameData.amount.toNumber() / LAMPORTS_PER_SOL} SOL`
-  //     );
-  //     console.log(`   Player Choice: ${JSON.stringify(gameData.playerChoice)}`);
-  //     console.log(`   Game Status: ${JSON.stringify(gameData.status)}`);
-  //     console.log(`   Game Result: ${JSON.stringify(gameData.result)}`);
-
-  //     assert.deepEqual(
-  //       gameData.status,
-  //       { finished: {} },
-  //       "Game status should be 'finished' after finalization"
-  //     );
-  //     console.log(`✅ Assertion passed: Game status is 'finished'`);
-  //   } catch (e) {
-  //     console.error("❌ Error finalizing game:", e);
-  //     throw e;
-  //   }
-  // });
-
-  // it("Claim rewards if won", async () => {
-  //   console.log("\n💰 Starting: Claim Rewards Test");
-  //   try {
-  //     const gameData = await program.account.coinflip.fetch(coinflip);
-  //     console.log(`\n📊 Game Result:`);
-  //     console.log(`   Player Choice: ${JSON.stringify(gameData.playerChoice)}`);
-  //     console.log(`   Game Result: ${JSON.stringify(gameData.result)}`);
-
-  //     const playerWon =
-  //       (gameData.result.option1Wins && gameData.playerChoice.option1) ||
-  //       (gameData.result.option2Wins && gameData.playerChoice.option2) ||
-  //       (gameData.result.tie && gameData.playerChoice.tie);
-
-  //     if (playerWon) {
-  //       console.log("Player won! Attempting to claim rewards...");
-  //       const tx = await program.methods
-  //         .claimRewards(room_id)
-  //         .accounts({
-  //           player: player.publicKey,
-  //           coinflip,
-  //           houseTreasury,
-  //           systemProgram: SystemProgram.programId,
-  //         })
-  //         .rpc();
-
-  //       console.log(`✅ Rewards claimed successfully!`);
-  //       console.log(`📜 Transaction Signature: ${tx}`);
-  //     } else {
-  //       console.log("Player did not win. No rewards to claim.");
-  //     }
-
-  //     // Fetch final balances
-  //     const playerBalance = await program.provider.connection.getBalance(
-  //       player.publicKey
-  //     );
-  //     const houseTreasuryBalance = await program.provider.connection.getBalance(
-  //       houseTreasury
-  //     );
-  //     console.log(`\n💰 Final Balances:`);
-  //     console.log(`   Player balance: ${playerBalance / LAMPORTS_PER_SOL} SOL`);
-  //     console.log(
-  //       `   House Treasury balance: ${
-  //         houseTreasuryBalance / LAMPORTS_PER_SOL
-  //       } SOL`
-  //     );
-
-  //     const playerBalanceChange =
-  //       (playerBalance - initialPlayerBalance.toNumber()) / LAMPORTS_PER_SOL;
-  //     const treasuryBalanceChange =
-  //       (houseTreasuryBalance - initialHouseTreasuryBalance.toNumber()) /
-  //       LAMPORTS_PER_SOL;
-
-  //     console.log(`\n📈 Balance Changes:`);
-  //     console.log(
-  //       `   Player: ${
-  //         playerBalanceChange > 0 ? "+" : ""
-  //       }${playerBalanceChange.toFixed(4)} SOL`
-  //     );
-  //     console.log(
-  //       `   House Treasury: ${
-  //         treasuryBalanceChange > 0 ? "+" : ""
-  //       }${treasuryBalanceChange.toFixed(4)} SOL`
-  //     );
-  //   } catch (e) {
-  //     console.error("❌ Error claiming rewards:", e);
-  //     throw e;
-  //   }
-  // });
+      console.log(`\n📈 Balance Changes:`);
+      console.log(
+        `   Player: ${
+          playerBalanceChange > 0 ? "+" : ""
+        }${playerBalanceChange.toFixed(4)} SOL`
+      );
+      console.log(
+        `   House Treasury: ${
+          treasuryBalanceChange > 0 ? "+" : ""
+        }${treasuryBalanceChange.toFixed(4)} SOL`
+      );
+    } catch (e) {
+      console.error("❌ Error claiming rewards:", e);
+      throw e;
+    }
+  });
 });

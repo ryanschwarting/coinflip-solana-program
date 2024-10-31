@@ -233,10 +233,10 @@ pub mod solana_coinflip_game {
         let authority = &ctx.accounts.authority;
 
         require!(amount > 0, InvalidAmount::ZeroAmount);
-        require!(
-            house_treasury.balance >= amount,
-            HouseError::InsufficientFunds
-        );
+
+        // Get actual lamports instead of checking state balance
+        let actual_balance = house_treasury.to_account_info().lamports();
+        require!(actual_balance >= amount, HouseError::InsufficientFunds);
 
         // Transfer funds from house treasury to authority
         **house_treasury.to_account_info().try_borrow_mut_lamports()? = house_treasury
@@ -250,11 +250,8 @@ pub mod solana_coinflip_game {
             .checked_add(amount)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
-        // Update house treasury balance
-        house_treasury.balance = house_treasury
-            .balance
-            .checked_sub(amount)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+        // Update house treasury balance to match actual balance
+        house_treasury.balance = house_treasury.to_account_info().lamports();
 
         msg!("Withdrawn {} lamports from the treasury", amount);
         Ok(())
